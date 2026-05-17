@@ -7,8 +7,8 @@ package model;
  * 
  */
 public class BookIsbn {
-	private int isbnId; // PK [cite: 120]
-    private int bookId; // FK [cite: 120]
+	private int isbnId; // PK 
+    private int bookId; // FK 
     private String isbn;
 
     public int getIsbnId() { return isbnId; }
