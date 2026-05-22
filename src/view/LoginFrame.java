@@ -98,8 +98,17 @@ public class LoginFrame extends JFrame {
             
             this.dispose(); // 關閉登入視窗
             
-            // 進入主畫面
-            new MainFrame(targetUser.getName(), roleStr, userId).setVisible(true); 
+            // --- 修改後的登入跳轉邏輯 ---
+            this.dispose(); // 先關閉登入視窗
+
+            // 判斷權限等級 (假設 Admin 的 RoleLevel 為 "ADMIN" 或對應的數字)
+            if ("ADMIN".equals(roleStr)) { 
+                // 如果是管理員，導向 AdminFrame
+                new AdminFrame().setVisible(true); 
+            } else {
+                // 如果是一般使用者，導向 MainFrame
+                new MainFrame(targetUser.getName(), roleStr, userId).setVisible(true);
+            }
             
         } catch (LibraryException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "登入提示", JOptionPane.ERROR_MESSAGE);

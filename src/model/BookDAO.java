@@ -484,4 +484,18 @@ public class BookDAO {
         }
         return list;
     }
+    public boolean addBook(Book book) {
+    String sql = "INSERT INTO Books (title, authors, subjects, publisher, status) VALUES (?, ?, ?, ?, 'AVAILABLE')";
+    try (Connection conn = DBUtil.getConnection();
+         PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        pstmt.setString(1, book.getTitle());
+        pstmt.setString(2, book.getAuthors());
+        pstmt.setString(3, book.getSubjects());
+        pstmt.setString(4, book.getPublisher());
+        return pstmt.executeUpdate() > 0;
+    } catch (SQLException e) {
+        e.printStackTrace();
+        return false;
+    }
+}
 }

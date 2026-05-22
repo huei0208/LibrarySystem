@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "TestDB",
+      "request": "launch",
+      "mainClass": "model.TestDB",
+      "projectName": "LibrarySystem"
+    },
+    {
+      "type": "java",
       "name": "Run LibrarySystem",
       "request": "launch",
       "mainClass": "view.EntryFrame",
