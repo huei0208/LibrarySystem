@@ -3,7 +3,7 @@
   "configurations": [
     {
       "type": "java",
-      "name": "Run LibrarySystem",
+      "name": "EntryFrame Run",
       "request": "launch",
       "mainClass": "view.EntryFrame",
       "cwd": "${workspaceFolder}",
