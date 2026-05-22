@@ -10,7 +10,8 @@
       "classPaths": [
         "${workspaceFolder}/bin",
         "${workspaceFolder}/lib/*"
-      ]
+      ],
+      "preLaunchTask": "Compile LibrarySystem"
     }
   ]
 }
