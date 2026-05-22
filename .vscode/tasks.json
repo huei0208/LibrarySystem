@@ -16,7 +16,7 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": "$javac"
+      "problemMatcher": []
     }
   ]
 }
