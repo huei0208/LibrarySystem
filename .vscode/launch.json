@@ -3,6 +3,7 @@
   "configurations": [
     {
       "type": "java",
+<<<<<<< HEAD
       "name": "TestDB",
       "request": "launch",
       "mainClass": "model.TestDB",
@@ -11,13 +12,17 @@
     {
       "type": "java",
       "name": "Run LibrarySystem",
+=======
+      "name": "EntryFrame Run",
+>>>>>>> 23cf2d41858f66a968fe6f5e3553894084a89779
       "request": "launch",
       "mainClass": "view.EntryFrame",
       "cwd": "${workspaceFolder}",
       "classPaths": [
         "${workspaceFolder}/bin",
         "${workspaceFolder}/lib/*"
-      ]
+      ],
+      "preLaunchTask": "Compile LibrarySystem"
     }
   ]
 }
