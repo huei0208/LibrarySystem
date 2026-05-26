@@ -608,4 +608,47 @@ public class BookDAO {
         }
         return list;
     }
+    /**
+     * ✨ 新增功能：獲取特定使用者的「排隊中」與「已到館」預約清單
+     */
+    public List<Object[]> getUserReservations(int userId) {
+        List<Object[]> list = new ArrayList<>();
+        // SQL 說明：將 Reservations 與 Books 表格 JOIN 起來，撈出書名、預約時間與狀態
+        String sql = "SELECT b.title, r.reserve_date, r.status " +
+                     "FROM Reservations r " +
+                     "JOIN Books b ON r.book_id = b.book_id " +
+                     "WHERE r.user_id = ? AND r.status IN ('WAITING', 'NOTIFIED') " +
+                     "ORDER BY r.reserve_date DESC";
+
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            
+            while (rs.next()) {
+                String statusStr = rs.getString("status");
+                // 轉成親切的中文狀態
+                String displayStatus = statusStr.equalsIgnoreCase("NOTIFIED") ? "🟢 書籍已到館 (請盡速借閱)" : "🟡 排隊等待中";
+                
+                // 處理預約時間
+                String dateStr = "---";
+                if (rs.getTimestamp("reserve_date") != null) {
+                    dateStr = rs.getTimestamp("reserve_date").toLocalDateTime().format(formatter);
+                }
+
+                list.add(new Object[]{
+                    rs.getString("title"),
+                    dateStr,
+                    displayStatus
+                });
+            }
+        } catch (SQLException e) {
+            System.err.println("獲取個人預約紀錄失敗：" + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
 }

@@ -7,7 +7,7 @@
       "command": "javac",
       "args": [
         "-encoding", "UTF-8",
-        "-cp", ".;lib/*",
+        "-cp", "'.;lib/*'",
         "-d", "bin",
         "src/model/*.java",
         "src/view/*.java",

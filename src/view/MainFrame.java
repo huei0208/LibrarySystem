@@ -3,17 +3,19 @@ package view;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.util.ArrayList; // ✨ 新增
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.List;
-import model.BookDAO; 
+import model.BookDAO;
+import model.NotificationDAO; 
 
 @SuppressWarnings("serial")
 public class MainFrame extends JFrame {
     private String userRole; 
     private int userId; 
     private BookDAO bookDAO = new BookDAO();
-    private List<String> notificationList = new ArrayList<>(); // ✨ 新增：訊息容器
-    private JButton btnMailbox;
+    private NotificationDAO notiDAO = new NotificationDAO(); 
+    private JButton btnMailbox; 
 
     public MainFrame(String userName, String role, int userId) {
         this.userRole = role;
@@ -34,32 +36,27 @@ public class MainFrame extends JFrame {
         lblStatus.setBounds(50, 20, 300, 30);
         longBgPanel.add(lblStatus);
 
-        // --- ✨ 改良版：訊息中心按鈕 (放在右上角) ---
-        collectAllNotifications(); // 登入時默默收集訊息
-        
-        JButton btnMailbox = new JButton();
-        // 1. 如果有通知，顯示紅色數字；沒有的話顯示「無新訊息」
-        if (notificationList.size() > 0) {
-            btnMailbox.setText("📬 訊息中心 (" + notificationList.size() + ")");
-            btnMailbox.setForeground(Color.RED); // ✨ 將文字變為紅色
-        } else {
-            btnMailbox.setText("📬 訊息中心 (0)");
-            btnMailbox.setForeground(Color.GRAY);
-        }
-        
+        // ============================================================
+        // ✨ 信箱與通知系統初始化
+        // ============================================================
+        syncSystemNotifications(); // 1. 登入時，自動偵測逾期/到期並寫入信箱資料庫
+
+        btnMailbox = new JButton();
         btnMailbox.setBounds(750, 20, 200, 40);
         btnMailbox.setFont(new Font("Microsoft JhengHei", Font.BOLD, 14));
         
-        // 2. ✨✨ 刪除按鈕邊框與背景的關鍵設定 ✨✨
-        btnMailbox.setContentAreaFilled(false); // 去除按鈕背景色
-        btnMailbox.setBorderPainted(false);     // ✨ 關鍵：移除原本的小框框邊框
-        btnMailbox.setFocusPainted(false);      // 移除點擊時的焦點框
-        btnMailbox.setCursor(new Cursor(Cursor.HAND_CURSOR)); // 滑鼠移上去變手指
-        
-        btnMailbox.addActionListener(e -> showNotificationDialog());
-        longBgPanel.add(btnMailbox);
+        btnMailbox.setContentAreaFilled(false); 
+        btnMailbox.setBorderPainted(false);     
+        btnMailbox.setFocusPainted(false);      
+        btnMailbox.setCursor(new Cursor(Cursor.HAND_CURSOR)); 
 
-        // (1) 書籍查詢
+        updateMailboxBadge(); // 2. 根據資料庫更新數字與顏色
+
+        btnMailbox.addActionListener(e -> openMailbox());
+        longBgPanel.add(btnMailbox);
+        // ============================================================
+
+        // (1) 書籍查詢系統
         addMenuButton(longBgPanel, 350, 150, 300, 60, "書籍查詢、借書系統", e -> {
             String searchRole = (userRole.equals("V") || userRole.equalsIgnoreCase("VIP")) ? "VIP" : "NORMAL";
             new SearchFrame(searchRole, this.userId).setVisible(true);
@@ -80,14 +77,27 @@ public class MainFrame extends JFrame {
             new HistoryFrame(this.userId).setVisible(true);
         });
 
-        // (5) VIP 專屬區
+        // ============================================================
+        // ✨ 新排版：將「預約紀錄查詢」與「VIP專屬區」分開排列
+        // ============================================================
+
+        // (5) 預約紀錄查詢 (放在原本 VIP 的位置 y=470)
+        addMenuButton(longBgPanel, 350, 470, 300, 60, "預約紀錄查詢", e -> {
+            new ReservationStatusFrame(this.userId).setVisible(true);
+        });
+
+        // (6) VIP 專屬區 (往下移一格，y 座標變成 550)
         if (role.equals("V") || role.equalsIgnoreCase("VIP")) {
-            addMenuButton(longBgPanel, 350, 470, 300, 60, "VIP 預約功能", e -> JOptionPane.showMessageDialog(this, "VIP 專屬預約介面已開啟。"));
+            addMenuButton(longBgPanel, 350, 550, 300, 60, "VIP 預約功能", e -> {
+                JOptionPane.showMessageDialog(this, "VIP 專屬預約介面已開啟。");
+            });
         } else {
-            addMenuButton(longBgPanel, 350, 470, 300, 60, "升級 VIP", e -> JOptionPane.showMessageDialog(this, "請洽櫃台付費升級以享有預約權限。"));
+            addMenuButton(longBgPanel, 350, 550, 300, 60, "升級 VIP", e -> {
+                JOptionPane.showMessageDialog(this, "請洽櫃台付費升級以享有預約權限。");
+            });
         }
 
-        // (6) 登出
+        // (7) 登出 (維持在最下方 y=670，因為你的長面板有 1000px 高，空間還很夠)
         addMenuButton(longBgPanel, 350, 670, 300, 60, "登出系統", e -> {
             this.dispose();
             new LoginFrame().setVisible(true);
@@ -96,13 +106,72 @@ public class MainFrame extends JFrame {
         JScrollPane scrollPane = new JScrollPane(longBgPanel);
         scrollPane.getVerticalScrollBar().setUnitIncrement(20);
         this.setContentPane(scrollPane);
+
+        // ============================================================
+        // ✨✨✨ 3. 雙重提醒：畫面載入後，自動彈出最新信件視窗 ✨✨✨
+        // ============================================================
+        showLoginPopup();
     } 
 
-    // --- ✨ 新增：收集所有系統訊息的方法 ---
-    private void collectAllNotifications() {
-        notificationList.clear();
+    /**
+     * ✨ 登入時的彈出視窗 (雙重提醒)
+     */
+    private void showLoginPopup() {
+        List<Object[]> notis = notiDAO.getUserNotifications(this.userId);
+        if (!notis.isEmpty()) {
+            // 使用 invokeLater 讓主畫面先跑出來，再彈出視窗，體驗更順暢！
+            SwingUtilities.invokeLater(() -> {
+                JTextArea area = new JTextArea(Math.min(10, notis.size() + 3), 40);
+                area.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 14));
+                area.setText("🚨 系統偵測到您目前有 " + notis.size() + " 則重要通知：\n\n");
+                
+                for (Object[] row : notis) {
+                    area.append(" • " + row[2] + "\n"); // row[2] 是資料庫裡的 message 欄位
+                }
+                
+                area.append("\n💡 提示：您可以點擊右上角「📬 訊息中心」來管理或刪除這些通知。");
+                area.setEditable(false);
+
+                JOptionPane.showMessageDialog(MainFrame.this, new JScrollPane(area), "🔔 登入重要提醒", JOptionPane.WARNING_MESSAGE);
+            });
+        }
+    }
+
+    /**
+     * ✨ 更新信箱按鈕上的數字和顏色
+     */
+    private void updateMailboxBadge() {
+        int count = notiDAO.getUnreadCount(this.userId);
+        if (count > 0) {
+            btnMailbox.setText("📬 訊息中心 (" + count + ")");
+            btnMailbox.setForeground(Color.RED); 
+        } else {
+            btnMailbox.setText("📬 訊息中心 (0)");
+            btnMailbox.setForeground(Color.GRAY); 
+        }
+    }
+
+    /**
+     * ✨ 開啟信箱視窗
+     */
+    private void openMailbox() {
+        MailboxFrame mailFrame = new MailboxFrame(this.userId);
+        mailFrame.setVisible(true);
         
-        // 1. 逾期提醒
+        // 關鍵：監聽信箱視窗何時被關閉，關閉時馬上重新計算右上角的數字！
+        mailFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                updateMailboxBadge();
+            }
+        });
+    }
+
+    /**
+     * ✨ 將系統提醒自動同步寫入資料庫
+     */
+    private void syncSystemNotifications() {
+        // 1. 處理逾期 (如果沒還書，系統就會再次幫你寫進信箱)
         List<model.BorrowRecord> records = bookDAO.getCurrentBorrowingWithFine(this.userId);
         int totalFine = 0, overdueCount = 0;
         for (model.BorrowRecord r : records) {
@@ -111,49 +180,26 @@ public class MainFrame extends JFrame {
                 totalFine += (r.getOverdueDays() * 20);
             }
         }
-        if (overdueCount > 0) notificationList.add("❌ 逾期提醒：您有 " + overdueCount + " 本書已逾期，累計罰款 NT$" + totalFine);
-
-        // 2. 到期提醒
-        List<String> expiringBooks = bookDAO.getExpiringBooks(this.userId, 3);
-        if (expiringBooks != null) notificationList.addAll(expiringBooks);
-
-        // 3. 預約通知
-        List<String> readyBooks = bookDAO.getReadyReservations(this.userId);
-        if (readyBooks != null) {
-            for (String title : readyBooks) notificationList.add("📚 預約到館：您預約的《" + title + "》已到館");
-        }
-    }
-
-    private void showNotificationDialog() {
-        if (notificationList.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "目前沒有新訊息。");
-            return;
+        if (overdueCount > 0) {
+            notiDAO.addNotification(this.userId, "❌ 逾期警告：您有 " + overdueCount + " 本書已逾期！累計罰款：NT$ " + totalFine + " 元");
         }
 
-        JTextArea area = new JTextArea(10, 40);
-        for (String msg : notificationList) {
-            area.append(msg + "\n");
+        // 2. 處理即將到期
+        List<String> expiringBooks = bookDAO.getExpiringBooks(this.userId, 3); 
+        if (expiringBooks != null) {
+            for (String info : expiringBooks) {
+                notiDAO.addNotification(this.userId, info);
+            }
         }
-        area.setEditable(false);
-
-        // 顯示訊息
-        JOptionPane.showMessageDialog(this, new JScrollPane(area), "系統訊息中心", JOptionPane.INFORMATION_MESSAGE);
         
-        // 點開後處理邏輯
-        bookDAO.clearReservationNotifications(this.userId);
-        notificationList.clear();
-
-        // ✨ 關鍵修正：更新按鈕文字而不是清空整個畫面
-        // 找到你的 btnMailbox (記得將 btnMailbox 設為成員變數 private JButton btnMailbox;)
-        // 如果 btnMailbox 是區域變數，請把它改成類別成員變數
-        updateMailboxButton(); 
-    }
-
-    private void updateMailboxButton() {
-        // 假設 btnMailbox 已經是類別成員變數
-        if (btnMailbox != null) {
-            btnMailbox.setText("📬 訊息中心 (0)");
-            btnMailbox.setForeground(Color.GRAY);
+        // 3. 處理預約到館
+        List<String> readyBooks = bookDAO.getReadyReservations(this.userId);
+        if (readyBooks != null && !readyBooks.isEmpty()) {
+            for (String title : readyBooks) {
+                notiDAO.addNotification(this.userId, "📚 預約到館：您預約的《" + title + "》已到館，請儘速前往借閱！");
+            }
+            // 寫入信箱後，清除舊的預約狀態
+            bookDAO.clearReservationNotifications(this.userId);
         }
     }
 

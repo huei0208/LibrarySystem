@@ -69,51 +69,45 @@ public class LoginFrame extends JFrame {
         btnRegister.addActionListener(e -> new RegisterFrame().setVisible(true));
     }
 
+    /**
+     * ✨ 淨化版：只處理「讀者/學生」登入邏輯
+     */
     private void handleLogin() {
         String inputNo = txtUser.getText().trim();
         String inputPass = new String(txtPass.getPassword()).trim();
 
         if (inputNo.isEmpty() || inputPass.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "請輸入帳號與密碼！", "提示", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "請輸入學號與密碼！", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
-            // --- 通道 1：先去「學生表 (Users)」找找看 ---
+            // 🚪 這裡我們只撈 Users (學生) 表格
             User targetUser = userDAO.login(inputNo, inputPass);
 
             if (targetUser != null) {
                 // 檢查是否被停權
                 if (targetUser.getStatus() == User.Status.SUSPENDED || 
                     targetUser.getStatus() == User.Status.DISABLED) { 
-                    throw new BorrowingRuleException("登入失敗：使用者 " + targetUser.getName() + " 已被停權。");
+                    JOptionPane.showMessageDialog(this, "登入失敗：帳號已被停權，請洽櫃台。", "停權告警", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
 
-                // 學生 (NORMAL 或 VIP) 登入成功
-                JOptionPane.showMessageDialog(this, "🎉 登入成功！歡迎回來 " + targetUser.getName());
+                // 讀者 (NORMAL 或 VIP) 登入成功
+                JOptionPane.showMessageDialog(this, "🎉 歡迎回來 " + targetUser.getName());
                 String roleStr = targetUser.getRoleLevel().toString(); 
                 int userId = targetUser.getUserId(); 
                 
-                this.dispose(); // 關閉登入視窗
+                this.dispose(); // 關閉讀者登入視窗
                 new MainFrame(targetUser.getName(), roleStr, userId).setVisible(true); // 進入學生主畫面
-                return; // 執行完就結束
+                return; 
             }
 
-            // --- 通道 2：如果學生表找不到，換去「管理者表 (Admins)」找 ---
-            AdminDAO adminDAO = new AdminDAO(); 
-            if (adminDAO.verifyAdmin(inputNo, inputPass)) { 
-                // 管理員登入成功
-                JOptionPane.showMessageDialog(this, "🛠️ 歡迎進入管理者後台！");
-                this.dispose();
-                new AdminFrame().setVisible(true); // 進入管理員專屬畫面
-                return; // 執行完就結束
-            }
+            // --- 💡 這裡已經把 AdminDAO 的驗證邏輯刪除了 ---
+            
+            // 如果在 User 表都找不到人
+            JOptionPane.showMessageDialog(this, "登入失敗：讀者帳號不存在或密碼錯誤。", "登入失敗", JOptionPane.ERROR_MESSAGE);
 
-            // --- 如果兩邊都找不到人 ---
-            throw new ResourceNotFoundException("登入失敗：帳號不存在或密碼錯誤。");
-
-        } catch (LibraryException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "登入提示", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "系統錯誤：" + e.getMessage(), "Debug", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
