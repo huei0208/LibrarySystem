@@ -20,6 +20,7 @@ public class Book {
     private String note; 
     private Status status = Status.AVAILABLE; 
     private List<String> isbnList = new ArrayList<>();
+    
 
     public enum Status { 
         AVAILABLE, BORROWED;
@@ -67,6 +68,8 @@ public class Book {
     }
 
     // --- 以下是你原本的 Getter 與 Setter (保持不變) ---
+    // --- 在 Book.java 裡，把這一整塊替換掉你原本的 Getter 與 Setter ---
+
     public int getBookId() { return bookId; }
     public void setBookId(int bookId) { this.bookId = bookId; }
     
@@ -76,6 +79,7 @@ public class Book {
     public String getAuthors() { return authors; }
     public void setAuthors(String authors) { this.authors = authors; }
     
+    // 以下是你要貼上的新內容：
     public String getSubjects() { return subjects; }
     public void setSubjects(String subjects) { this.subjects = subjects; }
     
@@ -96,7 +100,8 @@ public class Book {
     
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
-    
+    // 以上結束
+
     public Status getStatus() { return status; }
     public void setStatus(Status status) { this.status = status; }
     
@@ -106,4 +111,5 @@ public class Book {
     public String getFirstIsbn() {
         return (isbnList != null && !isbnList.isEmpty()) ? isbnList.get(0) : "無識別號";
     }
+
 }

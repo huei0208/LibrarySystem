@@ -1,6 +1,3 @@
-/**
- * 
- */
 package view;
 
 import javax.swing.*;
@@ -13,10 +10,10 @@ import model.UserDAO; // 引入負責資料庫操作的 DAO
  * 註冊頁面：負責將新使用者資料寫入資料庫
  */
 public class RegisterFrame extends JFrame {
-    private static final long serialVersionUID = 1L; // 解決 Serial Version 警告
-    private JTextField txtAccount, txtEmail, txtRoleCode; 
-    private JPasswordField txtPass; 
-    private UserDAO userDAO = new UserDAO(); // 建立 DAO 實例
+    private static final long serialVersionUID = 1L; 
+    private JTextField txtAccount, txtRealName; 
+    private JPasswordField txtPass, txtConfirmPass; // ✨ 修正：將 txtRoleCode 改為 txtConfirmPass 密碼框
+    private UserDAO userDAO = new UserDAO(); 
 
     public RegisterFrame() {
         setTitle("圖書館管理系統 - 註冊");
@@ -29,18 +26,19 @@ public class RegisterFrame extends JFrame {
         bgPanel.setLayout(null); 
         this.setContentPane(bgPanel);
 
-        // 2. 建立輸入框並對位 (座標沿用你原本的設定)
-        txtAccount = createInput(412, 229, 200, 28);
+        // 2. 建立輸入框並對位 (座標完全不動，保證對齊你的海洋藍原圖)
+        txtAccount = createInput(425, 223, 200, 28);
         bgPanel.add(txtAccount);
 
-        txtEmail = createInput(412, 282, 200, 28);
-        bgPanel.add(txtEmail);
+        txtRealName = createInput(425, 280, 200, 28);
+        bgPanel.add(txtRealName);
 
-        txtPass = createPasswordInput(412, 334, 200, 28);
+        txtPass = createPasswordInput(425, 336, 200, 28);
         bgPanel.add(txtPass);
 
-        txtRoleCode = createInput(412, 386, 200, 28);
-        bgPanel.add(txtRoleCode);
+        // ✨ 修正：最下面那一欄改成「確認密碼」輸入框，並且是密碼遮罩格式 (***)
+        txtConfirmPass = createPasswordInput(425, 390, 200, 28);
+        bgPanel.add(txtConfirmPass);
 
         // 3. 建立隱形按鈕
         JButton btnRegister = createHiddenButton(404, 434, 195, 35);
@@ -54,24 +52,29 @@ public class RegisterFrame extends JFrame {
         // 註冊按鈕事件
         btnRegister.addActionListener(e -> {
             String account = txtAccount.getText().trim();
-            String email = txtEmail.getText().trim();
+            String realName = txtRealName.getText().trim(); 
             String password = new String(txtPass.getPassword());
-            String role = txtRoleCode.getText().trim().toUpperCase(); 
+            String confirmPassword = new String(txtConfirmPass.getPassword()); // ✨ 撈取確認密碼
 
-            // 基礎防呆檢查
-            if (account.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "帳號與密碼不能為空！", "提示", JOptionPane.WARNING_MESSAGE);
+            // 1. 基礎防呆檢查
+            if (account.isEmpty() || realName.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "所有欄位皆不能為空！", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            // 角色權限處理：若輸入不是 VIP 或 NORMAL，則預設為 NORMAL
-            if (!role.equals("VIP") && !role.equals("NORMAL")) {
-                role = "NORMAL";
+            // 2. ✨✨ 核心安全驗證：檢查兩次密碼是否相同 ✨✨
+            if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "❌ 兩次輸入的密碼不一致，請重新檢查！", "密碼錯誤", JOptionPane.ERROR_MESSAGE);
+                txtConfirmPass.setText(""); // 清空確認密碼框方便使用者重填
+                txtConfirmPass.requestFocus(); // 將滑鼠游標自動跳回該框
+                return; // 攔截，不讓程式繼續往下走資料庫寫入
             }
 
+            // 3. 邏輯完全合理化：新註冊帳號，權限一律寫死為最安全的 "NORMAL"
+            String role = "NORMAL";
+
             // 呼叫 UserDAO 將資料存入資料庫
-            // 我們將 account 同時作為資料庫的 username 與 real_name 存入
-            boolean isSuccess = userDAO.register(account, account, password, role);
+            boolean isSuccess = userDAO.register(account, realName, password, role);
 
             if (isSuccess) {
                 JOptionPane.showMessageDialog(this, "🎉 註冊成功！請使用新帳號登入。");
@@ -88,7 +91,7 @@ public class RegisterFrame extends JFrame {
             this.dispose();
         });
 
-        // 座標偵測器 (開發微調用)
+        // 座標偵測器
         bgPanel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -107,11 +110,13 @@ public class RegisterFrame extends JFrame {
         return f;
     }
 
+    // 輔助工具：建立透明密碼輸入框
     private JPasswordField createPasswordInput(int x, int y, int w, int h) {
         JPasswordField f = new JPasswordField();
         f.setBounds(x, y, w, h);
         f.setOpaque(false);
         f.setBorder(null);
+        f.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 18));
         return f;
     }
 

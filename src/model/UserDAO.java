@@ -1,6 +1,8 @@
 package model;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDAO {
 
@@ -8,8 +10,8 @@ public class UserDAO {
      * 登入驗證
      */
     public User login(String inputAccount, String inputPassword) {
-        // 關鍵修正：將 users 改為 Users
-        String sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
+        // ✨ 符合簡報 Spec：student_no
+        String sql = "SELECT * FROM Users WHERE student_no = ? AND password = ?";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -22,11 +24,14 @@ public class UserDAO {
             if (rs.next()) {
                 User user = new User();
                 user.setUserId(rs.getInt("user_id"));
-                user.setStudentNo(rs.getString("username")); 
-                user.setName(rs.getString("real_name"));     
+                
+                // ✨ 符合簡報 Spec：撈取 student_no 與 name
+                user.setStudentNo(rs.getString("student_no")); 
+                user.setName(rs.getString("name"));     
                 user.setPassword(rs.getString("password"));
                 
-                String roleStr = rs.getString("role");
+                // ✨ 符合簡報 Spec：role_level
+                String roleStr = rs.getString("role_level");
                 String statusStr = rs.getString("status");
                 
                 if (roleStr != null) {
@@ -48,8 +53,8 @@ public class UserDAO {
      * 註冊新使用者
      */
     public boolean register(String studentNo, String name, String password, String role) {
-        // 關鍵修正：將 users 改為 Users
-        String sql = "INSERT INTO Users (username, real_name, password, role, status) VALUES (?, ?, ?, ?, 'ACTIVE')";
+        // ✨ 符合簡報 Spec：使用 student_no, name, role_level
+        String sql = "INSERT INTO Users (student_no, name, password, role_level, status) VALUES (?, ?, ?, ?, 'ACTIVE')";
         
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -61,10 +66,88 @@ public class UserDAO {
             
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            // 在 Console 印出具體錯誤原因，方便我們除錯
             System.err.println("SQL 執行錯誤: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
+    }
+
+    /**
+     * 管理者功能：更新學生帳號狀態（停權或復權）
+     */
+    public boolean updateUserStatus(int userId, String status) {
+        String sql = "UPDATE Users SET status = ? WHERE user_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, status.toUpperCase());
+            pstmt.setInt(2, userId);
+            
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("更新使用者狀態失敗: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 管理者功能：更新學生權限層級（升級為 VIP 或降級為 NORMAL）
+     */
+    public boolean updateUserRole(int userId, String role) {
+        // ✨ 符合簡報 Spec：將 role 改為 role_level
+        String sql = "UPDATE Users SET role_level = ? WHERE user_id = ?";
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, role.toUpperCase());
+            pstmt.setInt(2, userId);
+            
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("更新使用者權限失敗: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 管理者功能：抓取所有學生（使用者）清單
+     */
+    public List<User> getAllUsers() {
+        List<User> list = new ArrayList<>();
+        String sql = "SELECT * FROM Users";
+        
+        try (Connection conn = DBUtil.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            
+            while (rs.next()) {
+                User user = new User();
+                user.setUserId(rs.getInt("user_id"));
+                
+                // ✨ 符合簡報 Spec：撈取 student_no 與 name
+                user.setStudentNo(rs.getString("student_no"));
+                user.setName(rs.getString("name"));
+                user.setPassword(rs.getString("password"));
+                
+                // ✨ 符合簡報 Spec：role_level
+                String roleStr = rs.getString("role_level");
+                String statusStr = rs.getString("status");
+                
+                if (roleStr != null) {
+                    user.setRoleLevel(User.RoleLevel.valueOf(roleStr.toUpperCase()));
+                }
+                if (statusStr != null) {
+                    user.setStatus(User.Status.valueOf(statusStr.toUpperCase()));
+                }
+                
+                list.add(user);
+            }
+        } catch (SQLException e) {
+            System.err.println("獲取使用者清單失敗: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
     }
 }
