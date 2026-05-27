@@ -32,7 +32,7 @@ public class EntryFrame extends JFrame {
         // ============================================================
         JButton btnAdmin = new JButton();
         // 🔍 大致對準圖片上方的藍色按鈕區域 (置中)
-        btnAdmin.setBounds(350, 160, 300, 70); 
+        btnAdmin.setBounds(350, 130, 300, 70); 
         makeButtonInvisible(btnAdmin);
 
         // 點擊後打開「管理員專用登入頁面」
@@ -47,7 +47,7 @@ public class EntryFrame extends JFrame {
         // ============================================================
         JButton btnReader = new JButton();
         // 🔍 大致對準圖片下方的藍色按鈕區域 (置中)
-        btnReader.setBounds(350, 300, 300, 70); 
+        btnReader.setBounds(350, 270, 300, 70); 
         makeButtonInvisible(btnReader);
         
         // 點擊後打開「讀者專用登入頁面」
@@ -69,6 +69,11 @@ public class EntryFrame extends JFrame {
     }
 
     public static void main(String[] args) {
+        //try {
+        //UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        //} catch (Exception e) {
+        //e.printStackTrace();
+        //}
         // 啟動最前面的分流大門
         SwingUtilities.invokeLater(() -> {
             new EntryFrame().setVisible(true);

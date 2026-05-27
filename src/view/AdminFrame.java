@@ -38,11 +38,22 @@ public class AdminFrame extends JFrame {
         // 2. 載入並組合「學生權限管理分頁」
         tabbedPane.addTab("👥 學生帳號管理", createUserManagerPanel());
 
-        // ✨ 加入這行全新的第三分頁！
+        // 3. 載入並組合「全校借還紀錄分頁」
         tabbedPane.addTab("📄 全校借還紀錄", createAllRecordsPanel());
+
+        // 4. ✨ 新增並組合「借閱統計分析分頁」 (將 ReportPanel 整合進來)
+        ReportPanel reportPanel = new ReportPanel();
+        tabbedPane.addTab("📊 借閱統計分析", reportPanel);
 
         // 將分頁面板放到視窗中間
         add(tabbedPane, BorderLayout.CENTER);
+
+        // 🚀 加入切換分頁的監聽器：當切換到統計分析分頁時，自動重新整理圖表
+        tabbedPane.addChangeListener(e -> {
+            if (tabbedPane.getSelectedIndex() == 3) { // 第四個分頁的 Index 是 3
+                reportPanel.refreshChart();
+            }
+        });
 
         // 初始載入兩個表格的數據
         refreshBookTable();
@@ -104,10 +115,10 @@ public class AdminFrame extends JFrame {
         // 上方功能按鈕區
         JPanel topPanel = new JPanel();
         JButton toggleStatusBtn = new JButton("變更學生狀態 (停權/復權)");
-        JButton toggleRoleBtn = new JButton("變更權限層級 (一般/VIP)"); // ✨ 新增變更權限按鈕
+        JButton toggleRoleBtn = new JButton("變更權限層級 (一般/VIP)"); 
         
         topPanel.add(toggleStatusBtn);
-        topPanel.add(toggleRoleBtn); // ✨ 把權限按鈕放進控制面板
+        topPanel.add(toggleRoleBtn); 
         panel.add(topPanel, BorderLayout.NORTH);
 
         // 中間學生表格區
@@ -142,17 +153,15 @@ public class AdminFrame extends JFrame {
             }
         });
 
-        // 2. ✨✨ 新增：升級/降級 VIP 按鈕事件實作 ✨✨
+        // 2. 升級/降級 VIP 按鈕事件實作
         toggleRoleBtn.addActionListener(evt -> {
             int selectedRow = userTable.getSelectedRow();
             if (selectedRow != -1) {
                 int userId = (int) userTableModel.getValueAt(selectedRow, 0);
                 
-                // 從表格第 4 欄 (Index 3) 抓取目前的權限層級
                 Object currentRoleObj = userTableModel.getValueAt(selectedRow, 3);
                 String currentRole = currentRoleObj != null ? currentRoleObj.toString() : "NORMAL";
                 
-                // 智慧判斷：如果是 NORMAL 就改為 VIP，如果是 VIP 就改為 NORMAL
                 String targetRole = "NORMAL".equals(currentRole) ? "VIP" : "NORMAL";
                 String actionText = "NORMAL".equals(currentRole) ? "【升級為 VIP】" : "【降級為 一般會員】";
 
@@ -161,10 +170,9 @@ public class AdminFrame extends JFrame {
                         "變更權限層級確認", JOptionPane.YES_NO_OPTION);
 
                 if (confirm == JOptionPane.YES_OPTION) {
-                    // 呼叫我們剛剛在 UserDAO 補寫的新武器！
                     if (userDAO.updateUserRole(userId, targetRole)) {
                         JOptionPane.showMessageDialog(this, actionText + " 成功！");
-                        refreshUserTable(); // 重新整理表格
+                        refreshUserTable(); 
                     } else {
                         JOptionPane.showMessageDialog(this, "操作失敗，請檢查資料庫連線。");
                     }
@@ -202,14 +210,12 @@ public class AdminFrame extends JFrame {
         panel.add(new JScrollPane(recordTable), BorderLayout.CENTER);
 
         // --- 載入資料的邏輯 ---
-        // 定義一個刷新表格的動作
         Runnable refreshTable = () -> {
             recordTableModel.setRowCount(0); // 清空表格
             String keyword = txtSearch.getText();
             List<Object[]> records = bookDAO.getAllSystemBorrowRecords(keyword);
             
             for (Object[] row : records) {
-                // row[5] 是 return_date，如果不是 null 就代表已歸還
                 String status = (row[5] != null) ? "🟢 已歸還" : "🔴 借閱中";
                 String returnDateStr = (row[5] != null) ? row[5].toString() : "--- 尚未歸還 ---";
                 
@@ -263,15 +269,12 @@ public class AdminFrame extends JFrame {
         userTableModel.setRowCount(0);
         List<User> users = userDAO.getAllUsers();
         for (User u : users) {
-            // 將狀態轉換為易讀的中文顯示
-            String statusChinese = u.getStatus() != null && u.getStatus().toString().equals("SUSPENDED") ? "已停權 ❌" : "正常 🟢";
-            
             userTableModel.addRow(new Object[]{
                 u.getUserId(),
                 u.getStudentNo(),
                 u.getName(),
                 u.getRoleLevel(),
-                u.getStatus() != null ? u.getStatus().name() : "ACTIVE" // 傳送純文字狀態給邏輯判斷
+                u.getStatus() != null ? u.getStatus().name() : "ACTIVE" 
             });
         }
     }

@@ -3,6 +3,7 @@
         "src"
     ],
     "java.project.referencedLibraries": [
-        "lib/mysql-connector-j-9.7.0.jar"
+        "lib/mysql-connector-j-9.7.0.jar",
+        "lib/jfreechart-1.5.3.jar"
     ]
 }
