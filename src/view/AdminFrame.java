@@ -8,6 +8,7 @@ import model.User;
 import model.UserDAO;
 import java.awt.*;
 import java.util.List;
+import model.ReviewDAO;
 
 public class AdminFrame extends JFrame {
     // DAO 元件
@@ -44,6 +45,9 @@ public class AdminFrame extends JFrame {
         // 4. ✨ 新增並組合「借閱統計分析分頁」 (將 ReportPanel 整合進來)
         ReportPanel reportPanel = new ReportPanel();
         tabbedPane.addTab("📊 借閱統計分析", reportPanel);
+
+        // 5. ✨ 載入並組合「全校書評管理分頁」
+        tabbedPane.addTab("💬 全校書評管理", createAllReviewsPanel());
 
         // 將分頁面板放到視窗中間
         add(tabbedPane, BorderLayout.CENTER);
@@ -277,5 +281,85 @@ public class AdminFrame extends JFrame {
                 u.getStatus() != null ? u.getStatus().name() : "ACTIVE" 
             });
         }
+    }
+    /**
+     * 建立「全校書評管理」面板
+     */
+    private JPanel createAllReviewsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        ReviewDAO reviewDAO = new ReviewDAO();
+
+        // --- 上方：搜尋與控制列 ---
+        JPanel topPanel = new JPanel();
+        JTextField txtSearch = new JTextField(15);
+        JButton btnSearch = new JButton("搜尋 (書名/姓名)");
+        JButton btnClear = new JButton("顯示全部");
+        JButton btnDelete = new JButton("🗑️ 刪除不當留言");
+        btnDelete.setBackground(new Color(255, 102, 102));
+        btnDelete.setForeground(Color.WHITE);
+        
+        topPanel.add(new JLabel("關鍵字："));
+        topPanel.add(txtSearch);
+        topPanel.add(btnSearch);
+        topPanel.add(btnClear);
+        topPanel.add(btnDelete);
+        panel.add(topPanel, BorderLayout.NORTH);
+
+        // --- 中間：書評表格 ---
+        String[] columnNames = {"評論ID(隱藏)", "書籍名稱", "留言者", "評分", "評論內容", "留言時間"};
+        DefaultTableModel reviewTableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) { return false; }
+        };
+        JTable reviewTable = new JTable(reviewTableModel);
+        reviewTable.setRowHeight(35);
+        
+        // 隱藏 ID 欄位
+        reviewTable.getColumnModel().getColumn(0).setMinWidth(0);
+        reviewTable.getColumnModel().getColumn(0).setMaxWidth(0);
+        reviewTable.getColumnModel().getColumn(2).setPreferredWidth(100);
+        reviewTable.getColumnModel().getColumn(4).setPreferredWidth(300); // 評論內容放寬
+
+        panel.add(new JScrollPane(reviewTable), BorderLayout.CENTER);
+
+        // --- 載入資料的邏輯 ---
+        Runnable refreshTable = () -> {
+            reviewTableModel.setRowCount(0); 
+            String keyword = txtSearch.getText();
+            List<Object[]> reviews = reviewDAO.getAllSystemReviews(keyword);
+            for (Object[] row : reviews) {
+                reviewTableModel.addRow(row);
+            }
+        };
+
+        // 綁定事件
+        btnSearch.addActionListener(e -> refreshTable.run());
+        btnClear.addActionListener(e -> {
+            txtSearch.setText("");
+            refreshTable.run();
+        });
+        
+        btnDelete.addActionListener(e -> {
+            int selectedRow = reviewTable.getSelectedRow();
+            if (selectedRow != -1) {
+                int reviewId = (int) reviewTableModel.getValueAt(selectedRow, 0);
+                int confirm = JOptionPane.showConfirmDialog(panel, 
+                    "確定要刪除這筆書評嗎？刪除後無法復原。", "刪除確認", JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (reviewDAO.deleteReview(reviewId)) {
+                        JOptionPane.showMessageDialog(panel, "書評已刪除！");
+                        refreshTable.run();
+                    } else {
+                        JOptionPane.showMessageDialog(panel, "刪除失敗！");
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(panel, "請先選取一筆要刪除的書評！");
+            }
+        });
+
+        // 初始化載入
+        refreshTable.run();
+        return panel;
     }
 }

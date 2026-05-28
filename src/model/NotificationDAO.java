@@ -91,4 +91,23 @@ public class NotificationDAO {
             e.printStackTrace(); 
         }
     }
+    /**
+     * 一鍵刪除特定使用者的所有通知
+     */
+    public boolean deleteAllNotifications(int userId) {
+        // 請確認你的資料庫中，通知表的名稱是否為 notifications (如果是其他名稱請替換)
+        String sql = "DELETE FROM notifications WHERE user_id = ?"; 
+        
+        try (java.sql.Connection conn = DBUtil.getConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setInt(1, userId);
+            int rowsAffected = pstmt.executeUpdate();
+            return rowsAffected > 0; // 只要有刪除到資料就回傳 true
+            
+        } catch (java.sql.SQLException e) {
+            System.err.println("刪除全部通知失敗: " + e.getMessage());
+            return false;
+        }
+    }
 }

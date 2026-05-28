@@ -36,12 +36,17 @@ public class BookHistoryFrame extends JFrame {
         JScrollPane sp = new JScrollPane(table);
         mainPanel.add(sp, BorderLayout.CENTER);
 
-        // 載入資料
+        // 載入資料 (✨ 加入長度防呆機制)
         List<Object[]> data = bookDAO.getBookBorrowHistory(bookId);
         for (Object[] row : data) {
-            String borrowDate = row[1].toString().substring(0, 16); // 截掉秒數
-            String returnDate = (row[2] != null) ? row[2].toString().substring(0, 16) : "尚未歸還";
-            model.addRow(new Object[]{ row[0], borrowDate, returnDate });
+            String bDate = (row[1] != null) ? row[1].toString() : "未知時間";
+            String rDate = (row[2] != null) ? row[2].toString() : "尚未歸還";
+            
+            // 安全地截斷秒數 (只有當長度大於 16 時才截斷)
+            if (bDate.length() >= 16) bDate = bDate.substring(0, 16);
+            if (rDate.length() >= 16 && !rDate.equals("尚未歸還")) rDate = rDate.substring(0, 16);
+            
+            model.addRow(new Object[]{ row[0], bDate, rDate });
         }
 
         this.add(mainPanel);

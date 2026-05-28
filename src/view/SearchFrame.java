@@ -173,14 +173,33 @@ public class SearchFrame extends JFrame {
             }
         });
 
-        // 預約邏輯
+        // 3. 預約邏輯 (✨ 加入在庫防呆機制)
         btnReserve.addActionListener(e -> {
             int row = resultTable.getSelectedRow();
-            if (row == -1) return;
+            if (row == -1) { 
+                JOptionPane.showMessageDialog(this, "請先選擇一本書！"); 
+                return; 
+            }
+            
+            // 🛑 核心防呆：抓取表格第 6 欄的「狀態」
+            String status = resultTable.getValueAt(row, 6).toString();
+            if (status.contains("在庫") || status.contains("AVAILABLE")) {
+                JOptionPane.showMessageDialog(this, 
+                    "這本書還乖乖躺在圖書館的書架上喔！\n請直接點擊「借閱此書」，不需要排隊預約。", 
+                    "預約無效", 
+                    JOptionPane.WARNING_MESSAGE);
+                return; // 擋下來，不執行後續的資料庫預約寫入
+            }
+
+            // 確定不是在庫後，才執行原本的預約寫入
             String result = bookDAO.reserveBook(currentUserId, (int)resultTable.getValueAt(row, 0));
-            if ("SELF_BORROWED".equals(result)) JOptionPane.showMessageDialog(this, "您正持有此書，無需預約。");
-            else if ("SUCCESS".equals(result)) JOptionPane.showMessageDialog(this, "預約成功！");
-            else JOptionPane.showMessageDialog(this, "預約失敗或重複預約。");
+            if ("SELF_BORROWED".equals(result)) {
+                JOptionPane.showMessageDialog(this, "您正持有此書，無需預約。");
+            } else if ("SUCCESS".equals(result)) {
+                JOptionPane.showMessageDialog(this, "預約成功！已經幫您排入等待名單。");
+            } else {
+                JOptionPane.showMessageDialog(this, "預約失敗，您可能已經預約過這本書了。");
+            }
         });
 
         // 查看歷史
@@ -202,6 +221,29 @@ public class SearchFrame extends JFrame {
                 JOptionPane.showMessageDialog(this, "已移除收藏。");
                 refreshTable(bookDAO.getFavoriteBooks(currentUserId));
             }
+        });
+
+        // ... (在設定 btnReserve 或 btnAddFav 的附近加入這段)
+
+        // 6. 查看書評按鈕
+        JButton btnViewReview = new JButton("查看書評 💬");
+        btnViewReview.setBounds(560, 610, 150, 40); // 找個空位塞進去，你可以依照畫面微調座標
+        btnViewReview.setBackground(new Color(135, 206, 250)); // 淺天空藍
+        btnViewReview.setForeground(Color.BLACK);
+        bgPanel.add(btnViewReview);
+
+        // 綁定事件：點擊後彈出評論列表
+        btnViewReview.addActionListener(e -> {
+            int row = resultTable.getSelectedRow();
+            if (row == -1) { 
+                JOptionPane.showMessageDialog(this, "請先選擇一本想看書評的書籍！"); 
+                return; 
+            }
+            int bookId = (int) resultTable.getValueAt(row, 0);
+            String bookTitle = resultTable.getValueAt(row, 2).toString();
+            
+            // 彈出我們剛剛寫好的查看書評視窗
+            new ViewReviewDialog(this, bookId, bookTitle).setVisible(true);
         });
     } 
 

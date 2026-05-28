@@ -194,7 +194,7 @@ public class BookDAO {
                      "FROM Borrow_records r " +
                      "JOIN Books b ON r.book_id = b.book_id " +
                      "WHERE r.user_id = ? " +
-                     "ORDER BY r.borrow_date DESC"; // 最近的紀錄排在最上面
+                     "ORDER BY r.return_date IS NULL DESC, r.return_date DESC, r.borrow_date DESC"; // 最新還的書排在最上面
 
         try (Connection conn = DBUtil.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -216,31 +216,39 @@ public class BookDAO {
         return history;
     }
     /**
-     * 獲取單一書籍的借閱歷史
+     * 獲取單一書籍的歷史借閱紀錄
+     * 回傳格式：List<Object[]> -> {借閱人姓名, 借出時間, 歸還時間}
      */
     public List<Object[]> getBookBorrowHistory(int bookId) {
-        List<Object[]> history = new ArrayList<>();
-        // SQL 說明：連結 Users 取得借閱人姓名，並按時間排序
-        String sql = "SELECT u.real_name, r.borrow_date, r.return_date " +
-                     "FROM Borrow_records r " +
-                     "JOIN Users u ON r.user_id = u.user_id " +
+        List<Object[]> history = new java.util.ArrayList<>();
+        
+        // 💡 抓蟲關鍵：確保使用有底線的 borrow_records，並 JOIN users 表抓取學生姓名
+        // 💡 抓蟲關鍵：確保使用有底線的 borrow_records，並 JOIN users 表抓取學生姓名
+        String sql = "SELECT u.name, r.borrow_date, r.return_date " +
+                     "FROM borrow_records r " +
+                     "JOIN users u ON r.user_id = u.user_id " +
                      "WHERE r.book_id = ? " +
-                     "ORDER BY r.borrow_date DESC";
+                     // ✨ 真正的魔法：未歸還置頂，剩下的依照「歸還日期」由新到舊往下排
+                     "ORDER BY return_date IS NULL DESC, return_date DESC";
 
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (java.sql.Connection conn = DBUtil.getConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
             
             pstmt.setInt(1, bookId);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                history.add(new Object[]{
-                    rs.getString("real_name"),
-                    rs.getTimestamp("borrow_date"),
-                    rs.getTimestamp("return_date")
-                });
+            
+            try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String studentName = rs.getString("name");
+                    String borrowDate = rs.getString("borrow_date");
+                    String returnDate = rs.getString("return_date");
+                    
+                    history.add(new Object[]{studentName, borrowDate, returnDate});
+                }
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (java.sql.SQLException e) {
+            System.err.println("讀取書籍歷史紀錄失敗: " + e.getMessage());
+            e.printStackTrace();
+        }
         return history;
     }
     /**
@@ -566,21 +574,22 @@ public class BookDAO {
      */
     public List<Object[]> getAllSystemBorrowRecords(String keyword) {
         List<Object[]> list = new ArrayList<>();
-        // SQL 說明：將 Borrow_records, Users, Books 三張表 JOIN 起來，這樣才能同時顯示學號、姓名跟書名！
+        // SQL 說明：將 borrow_records, users, books 三張表 JOIN 起來，這樣才能同時顯示學號、姓名跟書名！
         String sql = "SELECT u.student_no, u.name, b.title, r.borrow_date, r.due_date, r.return_date " +
-                     "FROM Borrow_records r " +
-                     "JOIN Users u ON r.user_id = u.user_id " +
-                     "JOIN Books b ON r.book_id = b.book_id ";
+                     "FROM borrow_records r " +
+                     "JOIN users u ON r.user_id = u.user_id " +
+                     "JOIN books b ON r.book_id = b.book_id ";
         
         // 如果有輸入關鍵字，就加上條件過濾
         if (keyword != null && !keyword.trim().isEmpty()) {
             sql += "WHERE u.student_no LIKE ? OR u.name LIKE ? OR b.title LIKE ? ";
         }
         
-        sql += "ORDER BY r.borrow_date DESC"; // 最新借出的排在最上面
+        // ✨ 這裡套用我們的「魔法排序」！未歸還的強制置頂，其餘照借出時間排
+        sql += "ORDER BY r.return_date IS NULL DESC, r.borrow_date DESC";
 
-        try (Connection conn = DBUtil.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (java.sql.Connection conn = DBUtil.getConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             // 設定搜尋關鍵字 (前後加上 % 代表模糊搜尋)
             if (keyword != null && !keyword.trim().isEmpty()) {
@@ -590,19 +599,20 @@ public class BookDAO {
                 pstmt.setString(3, searchStr);
             }
 
-            ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
-                // 將資料打包成 Object 陣列，方便等一下直接塞進表格
-                list.add(new Object[]{
-                    rs.getString("student_no"),
-                    rs.getString("name"),
-                    rs.getString("title"),
-                    rs.getTimestamp("borrow_date"),
-                    rs.getTimestamp("due_date"),
-                    rs.getTimestamp("return_date")
-                });
+            try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    // 💡 將 Timestamp 改用 getString 取出，確保傳遞給 UI 時絕對安全且不會報錯
+                    list.add(new Object[]{
+                        rs.getString("student_no"),
+                        rs.getString("name"),
+                        rs.getString("title"),
+                        rs.getString("borrow_date"),
+                        rs.getString("due_date"),
+                        rs.getString("return_date")
+                    });
+                }
             }
-        } catch (SQLException e) {
+        } catch (java.sql.SQLException e) {
             System.err.println("查詢全校借閱紀錄失敗：" + e.getMessage());
             e.printStackTrace();
         }
@@ -651,4 +661,21 @@ public class BookDAO {
         }
         return list;
     }
+    // 💡 放在你的 DAO 檔案裡
+    public boolean deleteAllNotifications(int userId) {
+        // 假設你的通知資料表叫做 notifications
+        String sql = "DELETE FROM notifications WHERE user_id = ?"; 
+    
+        try (java.sql.Connection conn = DBUtil.getConnection();
+            java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        
+        pstmt.setInt(1, userId);
+        int rowsAffected = pstmt.executeUpdate();
+        return rowsAffected > 0; // 只要有刪除到資料就回傳 true
+        
+    } catch (java.sql.SQLException e) {
+        System.err.println("刪除全部通知失敗: " + e.getMessage());
+        return false;
+    }
+}
 }

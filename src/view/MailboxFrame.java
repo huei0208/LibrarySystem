@@ -71,9 +71,34 @@ public class MailboxFrame extends JFrame {
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         bottomPanel.setOpaque(false);
 
-        JButton btnDelete = new JButton("🗑️ 刪除選取訊息");
+        // ✨ 新增：一鍵清空按鈕
+        JButton btnDeleteAll = new JButton("一鍵清空所有訊息 🗑️");
+        btnDeleteAll.setFont(new Font("Microsoft JhengHei", Font.BOLD, 14));
+        btnDeleteAll.setBackground(new Color(255, 99, 71)); // 番茄紅，提醒這是破壞性動作
+        btnDeleteAll.setForeground(Color.WHITE);
+        btnDeleteAll.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnDeleteAll.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "確定要清空所有的系統通知嗎？\n(刪除後將無法復原喔！)", 
+                "一鍵清空確認", 
+                JOptionPane.YES_NO_OPTION, 
+                JOptionPane.WARNING_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                // 呼叫 DAO 的新方法進行全刪
+                if (notiDAO.deleteAllNotifications(userId)) {
+                    JOptionPane.showMessageDialog(this, "所有訊息已清空！");
+                    loadData(); // 重新整理表格（讓畫面變成空的）
+                } else {
+                    JOptionPane.showMessageDialog(this, "目前信箱是空的，或者發生錯誤。");
+                }
+            }
+        });
+
+        // 原本的刪除選取按鈕 (改個顏色區隔開來)
+        JButton btnDelete = new JButton("刪除選取訊息");
         btnDelete.setFont(new Font("Microsoft JhengHei", Font.BOLD, 14));
-        btnDelete.setBackground(new Color(255, 102, 102));
+        btnDelete.setBackground(new Color(255, 160, 122)); // 亮珊瑚色
         btnDelete.setForeground(Color.WHITE);
         btnDelete.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnDelete.addActionListener(e -> deleteSelected());
@@ -83,6 +108,8 @@ public class MailboxFrame extends JFrame {
         btnClose.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnClose.addActionListener(e -> this.dispose());
 
+        // 依序加入底部面板
+        bottomPanel.add(btnDeleteAll);
         bottomPanel.add(btnDelete);
         bottomPanel.add(btnClose);
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
