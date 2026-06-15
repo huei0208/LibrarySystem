@@ -9,8 +9,8 @@ import model.UserDAO;
 public class RegisterFrame extends JFrame {
     private static final long serialVersionUID = 1L;
 
-    private JTextField txtAccount, txtEmail, txtRoleCode;
-    private JPasswordField txtPass;
+    private JTextField txtAccount, txtRealName;
+    private JPasswordField txtPass, txtConfirmPass;
     private UserDAO userDAO = new UserDAO();
 
     public RegisterFrame() {
@@ -23,17 +23,17 @@ public class RegisterFrame extends JFrame {
         bgPanel.setLayout(null);
         this.setContentPane(bgPanel);
 
-        txtAccount = createInput(412, 229, 200, 28);
+        txtAccount = createInput(425, 223, 200, 28);
         bgPanel.add(txtAccount);
 
-        txtEmail = createInput(412, 282, 200, 28);
-        bgPanel.add(txtEmail);
+        txtRealName = createInput(425, 280, 200, 28);
+        bgPanel.add(txtRealName);
 
-        txtPass = createPasswordInput(412, 334, 200, 28);
+        txtPass = createPasswordInput(425, 336, 200, 28);
         bgPanel.add(txtPass);
 
-        txtRoleCode = createInput(412, 386, 200, 28);
-        bgPanel.add(txtRoleCode);
+        txtConfirmPass = createPasswordInput(425, 390, 200, 28);
+        bgPanel.add(txtConfirmPass);
 
         JButton btnRegister = createHiddenButton(404, 434, 195, 35);
         bgPanel.add(btnRegister);
@@ -43,25 +43,25 @@ public class RegisterFrame extends JFrame {
 
         btnRegister.addActionListener(e -> {
             String account = txtAccount.getText().trim();
-            String email = txtEmail.getText().trim();
+            String realName = txtRealName.getText().trim();
             String password = new String(txtPass.getPassword());
-            String role = txtRoleCode.getText().trim().toUpperCase();
+            String confirmPassword = new String(txtConfirmPass.getPassword());
 
-            if (account.isEmpty() || email.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "帳號、Email 與密碼不能為空！", "提示", JOptionPane.WARNING_MESSAGE);
+            if (account.isEmpty() || realName.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "所有欄位皆不能為空！", "提示", JOptionPane.WARNING_MESSAGE);
                 return;
             }
 
-            if (!email.contains("@") || !email.contains(".")) {
-                JOptionPane.showMessageDialog(this, "Email 格式不正確，請重新輸入。", "提示", JOptionPane.WARNING_MESSAGE);
+            if (!password.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(this, "兩次輸入的密碼不一致，請重新檢查！", "密碼錯誤", JOptionPane.ERROR_MESSAGE);
+                txtConfirmPass.setText("");
+                txtConfirmPass.requestFocus();
                 return;
             }
 
-            if (!role.equals("VIP") && !role.equals("NORMAL")) {
-                role = "NORMAL";
-            }
+            String role = "NORMAL";
 
-            boolean isSuccess = userDAO.register(account, account, password, role);
+            boolean isSuccess = userDAO.register(account, realName, password, role);
 
             if (isSuccess) {
                 JOptionPane.showMessageDialog(this, "註冊成功！請使用新帳號登入。");

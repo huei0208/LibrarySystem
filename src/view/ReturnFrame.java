@@ -139,6 +139,18 @@ public class ReturnFrame extends JFrame {
                 
                 // 重新整理介面清單
                 loadMyBorrowedBooks(); 
+                
+                // ✨ 新增：邀請撰寫書評的提示
+                int reviewChoice = JOptionPane.showConfirmDialog(this, 
+                    "還書手續已完成！\n您想為這本《" + bookName + "》留下書評給其他人參考嗎？", 
+                    "邀請評論", 
+                    JOptionPane.YES_NO_OPTION, 
+                    JOptionPane.QUESTION_MESSAGE);
+                    
+                if (reviewChoice == JOptionPane.YES_OPTION) {
+                    // 彈出我們剛剛寫好的書評撰寫視窗
+                    new WriteReviewDialog(this, bookId, bookName, currentUserId).setVisible(true);
+                }
             }
         }
     }

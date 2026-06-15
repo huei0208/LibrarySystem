@@ -8,4 +8,5 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="lib" path="lib/mysql-connector-j-9.7.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
+	<classpathentry kind="lib" path="lib/jfreechart-1.5.3.jar"/>
 </classpath>

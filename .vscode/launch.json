@@ -1,17 +1,18 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "type": "java",
-      "name": "EntryFrame Run",
-      "request": "launch",
-      "mainClass": "view.EntryFrame",
-      "cwd": "${workspaceFolder}",
-      "classPaths": [
-        "${workspaceFolder}/bin",
-        "${workspaceFolder}/lib/*"
-      ],
-      "preLaunchTask": "Compile LibrarySystem"
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "LibraryWebServer",
+            "request": "launch",
+            "mainClass": "controller.LibraryWebServer",
+            "projectName": "LibrarySystem"
+        },
+        {
+            "type": "java",
+            "name": "啟動圖書館系統",
+            "request": "launch",
+            "mainClass": "view.EntryFrame"
+        }
+    ]
 }

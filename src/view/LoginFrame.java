@@ -7,6 +7,7 @@ import java.awt.event.MouseEvent;
 import model.User;
 import model.UserDAO; // 引入 DAO
 import exception.*;
+import model.AdminDAO;
 
 public class LoginFrame extends JFrame {
     private JTextField txtUser;
@@ -34,7 +35,7 @@ public class LoginFrame extends JFrame {
 
         // 3. 使用者名稱輸入框 (學號)
         txtUser = new JTextField();
-        txtUser.setBounds(395, 246, 214, 26); 
+        txtUser.setBounds(395, 239, 214, 26); 
         txtUser.setOpaque(false); 
         txtUser.setBorder(null);  
         txtUser.setFont(new Font("Microsoft JhengHei", Font.PLAIN, 16));
@@ -42,70 +43,81 @@ public class LoginFrame extends JFrame {
 
         // 4. 密碼輸入框
         txtPass = new JPasswordField();
-        txtPass.setBounds(395, 304, 214, 26);
+        txtPass.setBounds(395, 300, 214, 26);
         txtPass.setOpaque(false);
         txtPass.setBorder(null);
         bgPanel.add(txtPass);
 
         // 5. 登入按鈕 (隱形)
         JButton btnLogin = new JButton();
-        btnLogin.setBounds(390, 354, 214, 26);
+        btnLogin.setBounds(385, 343, 217, 33);
         btnLogin.setContentAreaFilled(false); 
         btnLogin.setBorderPainted(false);     
         bgPanel.add(btnLogin);
+        
 
         // 6. 註冊按鈕 (隱形)
         JButton btnRegister = new JButton();
-        btnRegister.setBounds(485, 402, 30, 18); 
+        btnRegister.setBounds(480, 390, 30, 18); 
         btnRegister.setContentAreaFilled(false);
         btnRegister.setBorderPainted(false);
         bgPanel.add(btnRegister);
+
 
         // 7. 動作監聽
         btnLogin.addActionListener(e -> handleLogin());
         btnRegister.addActionListener(e -> new RegisterFrame().setVisible(true));
     }
 
+    /**
+     * ✨ 淨化版：只處理「讀者/學生」登入邏輯
+     */
     private void handleLogin() {
         String inputNo = txtUser.getText().trim();
         String inputPass = new String(txtPass.getPassword()).trim();
 
         if (inputNo.isEmpty() || inputPass.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "請輸入帳號與密碼！", "提示", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "請輸入學號與密碼！", "提示", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
-            // --- 核心改動：直接從資料庫找人 ---
+            // 🚪 這裡我們只撈 Users (學生) 表格
             User targetUser = userDAO.login(inputNo, inputPass);
 
-            if (targetUser == null) {
-                // 如果找不到人或密碼錯，DAO 會回傳 null
-                throw new ResourceNotFoundException("登入失敗：帳號不存在或密碼錯誤。");
+            if (targetUser != null) {
+                // 檢查是否被停權
+                if (targetUser.getStatus() == User.Status.SUSPENDED || 
+                    targetUser.getStatus() == User.Status.DISABLED) { 
+                    JOptionPane.showMessageDialog(this, "登入失敗：帳號已被停權，請洽櫃台。", "停權告警", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // 讀者 (NORMAL 或 VIP) 登入成功
+                JOptionPane.showMessageDialog(this, "🎉 歡迎回來 " + targetUser.getName());
+                String roleStr = targetUser.getRoleLevel().toString(); 
+                int userId = targetUser.getUserId(); 
+                
+                this.dispose(); // 關閉讀者登入視窗
+                new MainFrame(targetUser.getName(), roleStr, userId).setVisible(true); // 進入學生主畫面
+                return; 
             }
 
-            // 檢查狀態 (SUSPENDED 或 DISABLED)
-            if (targetUser.getStatus() == User.Status.SUSPENDED || 
-                targetUser.getStatus() == User.Status.DISABLED) { 
-                throw new BorrowingRuleException("登入失敗：使用者 " + targetUser.getName() + " 已被停權。");
-            }
+            // --- 💡 這裡已經把 AdminDAO 的驗證邏輯刪除了 ---
+            
+            // 如果在 User 表都找不到人
+            JOptionPane.showMessageDialog(this, "登入失敗：讀者帳號不存在或密碼錯誤。", "登入失敗", JOptionPane.ERROR_MESSAGE);
 
-            // 登入成功
-            JOptionPane.showMessageDialog(this, "🎉 登入成功！歡迎回來 " + targetUser.getName());
-            
-            String roleStr = targetUser.getRoleLevel().toString(); 
-            int userId = targetUser.getUserId(); 
-            
-            this.dispose(); // 關閉登入視窗
-            
-            // 進入主畫面
-            new MainFrame(targetUser.getName(), roleStr, userId).setVisible(true); 
-            
-        } catch (LibraryException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "登入提示", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "系統錯誤：" + e.getMessage(), "Debug", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
     }
+    // --- 請把這段放在 LoginFrame 類別的最底下，最後一個 } 之前 ---
+    public static void main(String[] args) {
+        // 啟動登入畫面的測試引擎
+        java.awt.EventQueue.invokeLater(() -> {
+            new LoginFrame().setVisible(true);
+        });
+    } 
 }
