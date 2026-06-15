@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>圖書館借還書系統</title>
+    <style>
+        body { margin: 0; font-family: 'Microsoft JhengHei', sans-serif; background-color: #f0f8ff; display: flex; flex-direction: column; height: 100vh; }
+        .top-nav { background-color: #0277bd; color: white; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 60px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); overflow-x: auto; }
+        .nav-links { display: flex; gap: 5px; }
+        .nav-links span { cursor: pointer; font-weight: bold; padding: 8px 12px; border-radius: 5px; transition: 0.3s; font-size: 15px; white-space: nowrap; }
+        .nav-links span:hover, .nav-links span.active { background-color: #01579b; }
+        .badge { background-color: #e53935; color: white; border-radius: 50%; padding: 2px 6px; font-size: 12px; margin-left: 5px; }
+        .main-container { display: flex; flex: 1; padding: 20px; gap: 20px; overflow: hidden; }
+        .sidebar { width: 250px; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); text-align: center; }
+        .sidebar img { width: 80px; height: 80px; background-color: #e1f5fe; border-radius: 50%; margin-bottom: 10px; }
+        .content-area { flex: 1; background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); overflow-y: auto; }
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .btn-action { background-color: #29b6f6; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-action:hover { background-color: #0288d1; }
+        .custom-table { border: 1px solid #b3e5fc; border-collapse: collapse; width: 100%; text-align: left; margin-top: 15px; }
+        .custom-table th { background-color: #e1f5fe; color: #0277bd; padding: 10px; border: 1px solid #b3e5fc; }
+        .custom-table td { padding: 10px; border: 1px solid #b3e5fc; }
+    </style>
+</head>
+<body>
+
+    <div class="top-nav">
+        <h3 style="margin: 0; white-space: nowrap;">🌊 海底圖書館</h3>
+        <div class="nav-links">
+            <span class="active" onclick="switchTab(this, 'search')">🔍 查詢與借閱</span>
+            <span onclick="switchTab(this, 'return')">📥 辦理還書</span>
+            <span onclick="switchTab(this, 'records')">📜 個人借閱紀錄</span>
+            <span onclick="switchTab(this, 'overdue')">⏳ 到期與逾期查詢</span>
+            <span onclick="switchTab(this, 'reservations')">📌 預約紀錄查詢</span>
+            <span onclick="switchTab(this, 'mailbox')">✉️ 通知信箱<span class="badge">1</span></span>
+        </div>
+        <div style="white-space: nowrap; margin-left: 20px;">
+            歡迎回來, <span id="topNavName" style="font-weight:bold; color:#ffeb3b;">讀者</span>! 
+            <button class="btn-action" style="background-color: #e53935; margin-left:10px;" onclick="logout()">登出</button>
+        </div>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="sidebar">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Ocean" alt="頭像">
+            <h3 id="sidebarShowName" style="color:#0277bd; margin:10px 0 5px 0;">讀者</h3>
+            <p id="sidebarShowIdx" style="color:gray; font-size:14px; margin:0; font-weight:bold;">學號載入中</p>
+            <p id="sidebarShowRole" style="color:#00b0ff; font-size:14px; margin:5px 0 0 0; font-weight:bold;">✨ 一般會員</p>
+            <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+            <p id="sidebarShowDays" style="font-size:14px; font-weight:bold; color:#0288d1;">可借閱天數：7 天</p>
+        </div>
+
+        <div class="content-area">
+            
+            <div id="search" class="page-section active">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">🔍 查詢館藏與辦理借閱</h3>
+                <div id="bookGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <p style="color: gray;">書籍載入中... 🫧</p>
+                </div>
+            </div>
+
+            <div id="return" class="page-section">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">📥 辦理還書</h3>
+                <p>請在此選擇您要歸還的書籍。(功能即將開放)</p>
+            </div>
+
+            <div id="records" class="page-section">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">📜 我的借閱歷史紀錄</h3>
+                <table class="custom-table">
+                    <thead>
+                        <tr><th>借閱書籍名稱</th><th>借出時間</th><th>到期時間</th><th>目前狀態</th></tr>
+                    </thead>
+                    <tbody id="borrowRecordTableBody">
+                        <tr><td colspan="4" style="text-align:center; color:gray;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="overdue" class="page-section">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">⏳ 借閱到期與逾期狀態查詢</h3>
+                <div style="border-left: 4px solid #ff9800; background-color: #fff3e0; padding: 12px 15px; border-radius: 8px; margin-top: 20px; margin-bottom: 15px;">
+                    載入到期狀態中...
+                </div>
+            </div>
+
+            <div id="reservations" class="page-section">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">📌 我的預約紀錄查詢</h3>
+                <table class="custom-table">
+                    <thead>
+                        <tr><th>預約書籍名稱</th><th>預約登記日期</th><th style="text-align: center;">排隊順位</th><th>狀態</th></tr>
+                    </thead>
+                    <tbody id="reservationTableBody">
+                        <tr><td colspan="4" style="text-align:center; color:gray;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="mailbox" class="page-section">
+                <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">✉️ 我的通知信箱</h3>
+                <div style="border-left: 4px solid #e53935; background-color: #ffebee; padding: 10px 15px; border-radius: 5px; margin-top: 20px;">
+                    <strong>系統通知：</strong> 歡迎使用新版海底圖書館系統！
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const SERVER_PORT = "8080"; 
+        const BASE_URL = `http://localhost:${SERVER_PORT}/api`;
+
+        const studentNo = sessionStorage.getItem("studentNo") || "未登入";
+        const userName = sessionStorage.getItem("userName") || "讀者";
+        const userRole = sessionStorage.getItem("userRole") || "一般會員";
+        const borrowDays = sessionStorage.getItem("borrowDays") || "7";
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("topNavName").innerText = userName;
+            document.getElementById("sidebarShowName").innerText = userName;
+            document.getElementById("sidebarShowIdx").innerText = studentNo;
+            document.getElementById("sidebarShowRole").innerText = `✨ ${userRole}`;
+            document.getElementById("sidebarShowDays").innerText = `可借閱天數：${borrowDays} 天`;
+
+            loadBooks();
+        });
+
+        function switchTab(clickedBtn, tabId) {
+            document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));
+            document.querySelectorAll('.nav-links span').forEach(btn => btn.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            clickedBtn.classList.add('active');
+
+            if (tabId === 'search') loadBooks();
+            else if (tabId === 'records') loadMyBorrowRecords(studentNo);
+            else if (tabId === 'reservations') loadMyReservations(studentNo);
+            else if (tabId === 'overdue') loadOverdueStatus(studentNo);
+        }
+
+        function loadBooks() {
+            fetch(`${BASE_URL}/books`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data)) {
+                        console.error("後端回傳非陣列:", data);
+                        document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">後端回傳格式錯誤</p>`;
+                        return;
+                    }
+
+                    let html = '';
+                    if (data.length === 0) {
+                        html = '<p style="color:gray; text-align:center; width:100%;">目前館藏空空如也 🫧</p>';
+                    } else {
+                        data.forEach(book => {
+                            // 💡【核心修正】增加防呆與除錯
+                            // 1. 強制把 status 轉字串，並清掉前後空白 (.trim())
+                            let statusStr = (book.status ? String(book.status).trim() : "未知");
+                            
+                            console.log(`Debug: 書名="${book.title}", 狀態="${statusStr}", 長度=${statusStr.length}`);
+
+                            // 2. 判斷邏輯：檢查關鍵字
+                            // 只要包含「在庫」或「在館」或「可借」，通通給他過！
+                            let isAvailable = statusStr.includes("在庫") || statusStr.includes("在館") || statusStr.includes("可借");
+                            
+                            let statusColor = isAvailable ? "#4CAF50" : "#e53935";
+                            let actionButton = isAvailable
+                                ? `<button class="btn-action" style="width:100%; margin-top:10px;" onclick="borrowBook('${book.book_id}')">📤 立即借閱</button>`
+                                : `<button class="btn-action" style="width:100%; margin-top:10px; background-color:#ff9800;" onclick="reserveBook('${book.book_id}')">📌 預約排隊</button>`;
+                            
+                            html += `
+                                <div style="border: 1px solid #b3e5fc; padding: 15px; border-radius: 10px; text-align: center; background-color: #fafafa; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.05); display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <h4 style="color: #0277bd; margin: 0 0 10px 0; font-size: 18px;">📖 ${book.title || '未知書名'}</h4>
+                                        <p style="font-size: 13px; color: gray; margin: 5px 0;">作者：${book.author || '未知作者'}</p>
+                                        <span style="background-color: ${statusColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                                            ${statusStr}
+                                        </span>
+                                    </div>
+                                    ${actionButton}
+                                </div>
+                            `;
+                        });
+                    }
+                    document.getElementById('bookGrid').innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("連線錯誤:", err);
+                    document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">無法連線到伺服器。</p>`;
+                });
+        }
+        // 🌟 2. 處理借書
+        function borrowBook(bookId) {
+            if(!confirm("確定要借閱這本書嗎？")) return;
+            fetch(`${BASE_URL}/borrow?bookId=${bookId}&studentNo=${studentNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("🎉 " + data.message);
+                        loadBooks(); 
+                    } else {
+                        alert("❌ 借閱失敗：" + data.message); 
+                    }
+                }).catch(err => alert("連線失敗，請檢查 Java 伺服器！"));
+        }
+
+        // 🌟 3. 處理預約
+        function reserveBook(bookId) {
+            if(!confirm("這本書目前被借走了，要加入預約排隊嗎？")) return;
+            fetch(`${BASE_URL}/reserve?bookId=${bookId}&studentNo=${studentNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("🎉 預約成功！");
+                    } else {
+                        alert("❌ 預約失敗：" + data.message);
+                    }
+                }).catch(err => alert("連線失敗！"));
+        }
+
+        // 🌟 4. 撈取借閱歷史 (防呆裝甲版 🛡️)
+        function loadMyBorrowRecords(stdNo) {
+            fetch(`${BASE_URL}/myBorrowRecords?studentNo=${stdNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    // 🛡️ 防呆：確保是陣列
+                    if (!Array.isArray(data)) {
+                        document.getElementById('borrowRecordTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">讀取失敗：${data.message || '異常'}</td></tr>`;
+                        return;
+                    }
+
+                    let html = '';
+                    if (data.length === 0) {
+                        html = '<tr><td colspan="4" style="text-align:center; color:gray;">目前沒有借閱紀錄 🫧</td></tr>';
+                    } else {
+                        data.forEach(record => {
+                            let statusStr = record.status || '未知';
+                            html += `<tr><td style="font-weight: bold;">📖 ${record.title || '未知書名'}</td><td style="color: gray;">${record.borrow_date || '-'}</td><td style="color: gray;">${record.due_date || '-'}</td><td><span style="color: green; font-weight: bold;">${statusStr}</span></td></tr>`;
+                        });
+                    }
+                    document.getElementById('borrowRecordTableBody').innerHTML = html;
+                }).catch(err => console.error(err));
+        }
+
+        function loadOverdueStatus(stdNo) {
+            document.getElementById('overdue').innerHTML = '<h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">⏳ 借閱到期與逾期狀態查詢</h3><p>載入中...</p>';
+        }
+        function loadMyReservations(stdNo) {
+            document.getElementById('reservationTableBody').innerHTML = '<tr><td colspan="4" style="text-align:center; color:gray;">載入中...</td></tr>';
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            alert("您已成功登出！");
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>

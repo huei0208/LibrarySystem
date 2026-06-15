@@ -3,6 +3,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "LoginFrame",
+            "request": "launch",
+            "mainClass": "view.LoginFrame",
+            "projectName": "LibrarySystem"
+        },
+        {
+            "type": "java",
             "name": "LibraryWebServer",
             "request": "launch",
             "mainClass": "controller.LibraryWebServer",

@@ -127,22 +127,120 @@ public class BookDAO {
             return false;
         }
     }
+    // 💡 核心借書邏輯：檢查上限、逾期，並使用 Transaction (資料庫交易) 確保安全
+    public String borrowBook(String studentNo, int bookId) {
+        try (java.sql.Connection conn = DBUtil.getConnection()) {
+            // 🛡️ 開啟「資料庫交易機制」，確保所有動作同進同退
+            conn.setAutoCommit(false); 
+            
+            try {
+                // 1️⃣ 第一關：抓取使用者 ID 與身分天數/上限
+                String userSql = "SELECT user_id, role_level FROM Users WHERE student_no = ?";
+                int userId = -1;
+                int borrowLimit = 3; // 一般會員預設最多借 3 本
+                int borrowDays = 7;  // 一般會員預設借 7 天
+
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(userSql)) {
+                    pstmt.setString(1, studentNo);
+                    java.sql.ResultSet rs = pstmt.executeQuery();
+                    if (rs.next()) {
+                        userId = rs.getInt("user_id");
+                        String role = rs.getString("role_level");
+                        if (role != null && role.toUpperCase().contains("VIP")) {
+                            borrowLimit = 5; // VIP 可借 5 本
+                            borrowDays = 14; // VIP 借 14 天
+                        }
+                    } else {
+                        return "找不到該使用者帳號！";
+                    }
+                }
+
+                // 2️⃣ 第二關：檢查是否有「逾期未還」的書
+                String overdueSql = "SELECT COUNT(*) AS overdue_count FROM Borrow_records WHERE user_id = ? AND return_date IS NULL AND due_date < NOW()";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(overdueSql)) {
+                    pstmt.setInt(1, userId);
+                    java.sql.ResultSet rs = pstmt.executeQuery();
+                    if (rs.next() && rs.getInt("overdue_count") > 0) {
+                        return "您目前有逾期未還的書籍，必須先歸還才能再借喔！";
+                    }
+                }
+
+                // 3️⃣ 第三關：檢查借閱數量是否「已達上限」
+                String countSql = "SELECT COUNT(*) AS current_borrows FROM Borrow_records WHERE user_id = ? AND return_date IS NULL";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(countSql)) {
+                    pstmt.setInt(1, userId);
+                    java.sql.ResultSet rs = pstmt.executeQuery();
+                    if (rs.next() && rs.getInt("current_borrows") >= borrowLimit) {
+                        return "您的借閱數量已達上限 (" + borrowLimit + "本) 囉！";
+                    }
+                }
+
+                // 4️⃣ 第四關：檢查書籍狀態是否真的是「可借閱」
+                String bookSql = "SELECT status FROM Books WHERE book_id = ?";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(bookSql)) {
+                    pstmt.setInt(1, bookId);
+                    java.sql.ResultSet rs = pstmt.executeQuery();
+                    if (rs.next()) {
+                        String status = rs.getString("status");
+                        if (!"可借閱".equals(status) && !"在館".equals(status)) {
+                            return "這本書目前無法借閱 (狀態: " + status + ")！";
+                        }
+                    } else {
+                        return "館藏中找不到這本書！";
+                    }
+                }
+
+                // 📝 最終執行 A：將書籍狀態改為「已借出」
+                String updateBookSql = "UPDATE Books SET status = '已借出' WHERE book_id = ?";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(updateBookSql)) {
+                    pstmt.setInt(1, bookId);
+                    pstmt.executeUpdate();
+                }
+
+                // 📝 最終執行 B：寫入借閱紀錄
+                String insertRecordSql = "INSERT INTO Borrow_records (user_id, book_id, borrow_date, due_date, borrow_days) VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), ?)";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(insertRecordSql)) {
+                    pstmt.setInt(1, userId);
+                    pstmt.setInt(2, bookId);
+                    pstmt.setInt(3, borrowDays);
+                    pstmt.setInt(4, borrowDays);
+                    pstmt.executeUpdate();
+                }
+
+                // 🎉 全部成功！提交資料庫交易
+                conn.commit(); 
+                return "成功：" + borrowDays; // 回傳成功與天數
+
+            } catch (Exception e) {
+                conn.rollback(); // 發生任何錯誤就倒轉
+                return "系統錯誤：" + e.getMessage();
+            } finally {
+                conn.setAutoCommit(true); // 恢復預設
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "資料庫連線異常：" + e.getMessage();
+        }
+    }
+    // =========================================================
+    // 🌟 舊版：給桌面端 SearchFrame 用的 (保留相容性，回傳 boolean)
+    // =========================================================
     public boolean borrowBook(int userId, int bookId, int days) {
         String updateBook = "UPDATE Books SET status = 'BORROWED' WHERE book_id = ?";
         String insertRecord = "INSERT INTO Borrow_records (user_id, book_id, due_date) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL ? DAY))";
         
-        Connection conn = null;
+        java.sql.Connection conn = null;
         try {
             conn = DBUtil.getConnection();
             conn.setAutoCommit(false); // 開啟事務
 
             // 1. 更新書狀態
-            PreparedStatement ps1 = conn.prepareStatement(updateBook);
+            java.sql.PreparedStatement ps1 = conn.prepareStatement(updateBook);
             ps1.setInt(1, bookId);
             ps1.executeUpdate();
 
             // 2. 新增紀錄
-            PreparedStatement ps2 = conn.prepareStatement(insertRecord);
+            java.sql.PreparedStatement ps2 = conn.prepareStatement(insertRecord);
             ps2.setInt(1, userId);
             ps2.setInt(2, bookId);
             ps2.setInt(3, days);
@@ -150,8 +248,8 @@ public class BookDAO {
 
             conn.commit(); // 全部成功才存檔
             return true;
-        } catch (SQLException e) {
-            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
+        } catch (java.sql.SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (java.sql.SQLException ex) { ex.printStackTrace(); }
             e.printStackTrace();
             return false;
         }
