@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>登入 - 海底圖書館</title>
+    <style>
+        /* 🌊 海洋藍可愛風底色與置中對齊 */
+        body {
+            background-color: #e0f7fa; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+        }
+        /* 📦 圓角視窗與陰影 */
+        .login-card {
+            background-color: white;
+            padding: 40px;
+            border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(2, 136, 209, 0.15);
+            width: 320px;
+            text-align: center;
+        }
+        .login-card h2 {
+            color: #0277bd;
+            margin-bottom: 25px;
+            font-weight: bold;
+        }
+        .input-group {
+            margin-bottom: 18px;
+            text-align: left;
+        }
+        /* 💡 標籤置於框外正上方、小字體精緻化 */
+        .input-group label {
+            display: block;
+            font-size: 13px; 
+            color: #0288d1;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+        /* ⌨️ 留白的輸入框 */
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #b3e5fc;
+            border-radius: 12px;
+            box-sizing: border-box;
+            outline: none;
+            transition: 0.3s;
+        }
+        .input-group input:focus {
+            border-color: #0288d1;
+        }
+        /* 🚀 現代感登入按鈕 */
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background-color: #0288d1;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+        .btn-login:hover {
+            background-color: #0277bd;
+        }
+        .footer-links {
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        .footer-links a {
+            color: #0288d1;
+            text-decoration: none;
+        }
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>🌊 海底圖書館</h2>
+        
+        <div class="input-group">
+            <label>使用者名稱</label>
+            <input type="text" id="username">
+        </div>
+        
+        <div class="input-group">
+            <label>密碼</label>
+            <input type="password" id="password">
+        </div>
+        
+        <button class="btn-login" onclick="doLogin()">登入</button>
+        
+        <div class="footer-links">
+            <a href="#">註冊/忘記密碼?</a>
+        </div>
+    </div>
+
+    <script>
+        function doLogin() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            if(!u || !p) {
+                alert("請完整輸入使用者名稱與密碼！");
+                return;
+            }
+
+            // 呼叫 Java 外送員進行驗證
+            fetch(`http://localhost:8080/api/login?username=${u}&password=${p}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        alert("登入成功！歡迎來到海底圖書館 🐠");
+                        // 成功後，自動跳轉到你之前做好的管理員大廳！
+                        window.location.href = 'index.html'; 
+                    } else {
+                        alert("登入失敗：使用者名稱或密碼錯誤！");
+                    }
+                })
+                .catch(err => {
+                    alert("連線失敗！請確認你的 Java 伺服器有在運行喔！");
+                    console.error(err);
+                });
+        }
+    </script>
+</body>
+</html>
