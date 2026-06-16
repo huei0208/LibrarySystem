@@ -27,9 +27,9 @@ public class AdminWebServer {
      * borrow_records
      * book_reviews
      */
-    private static final String TABLE_BOOKS = "Books";
-    private static final String TABLE_USERS = "Users";
-    private static final String TABLE_RECORDS = "Borrow_records";
+    private static final String TABLE_BOOKS = "books";
+    private static final String TABLE_USERS = "users";
+    private static final String TABLE_RECORDS = "borrow_records";
     private static final String TABLE_REVIEWS = "book_reviews";
 
     public static void main(String[] args) throws Exception {
