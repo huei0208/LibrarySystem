@@ -2,134 +2,239 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>登入 - 海底圖書館</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>海底圖書館 - 登入與註冊</title>
     <style>
-        /* 🌊 海洋藍可愛風底色與置中對齊 */
+        /* 🌊 整體海洋風背景 */
         body {
-            background-color: #e0f7fa; 
+            background-color: #e0f7fa;
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
-            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background-image: radial-gradient(circle at 50% 50%, #e1f5fe 0%, #b3e5fc 100%);
         }
-        /* 📦 圓角視窗與陰影 */
-        .login-card {
+
+        /* 💳 登入/註冊卡片主體 */
+        .auth-container {
             background-color: white;
             padding: 40px;
-            border-radius: 20px; 
-            box-shadow: 0 10px 25px rgba(2, 136, 209, 0.15);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(2, 119, 189, 0.15);
             width: 320px;
             text-align: center;
+            border-top: 6px solid #29b6f6;
         }
-        .login-card h2 {
+
+        /* 🐙 可愛章魚標題 */
+        .auth-container h2 {
             color: #0277bd;
+            margin-top: 0;
+            font-size: 24px;
+        }
+        .mascot { font-size: 50px; margin-bottom: 10px; }
+
+        /* 🗂️ 分頁切換按鈕 (登入 / 註冊) */
+        .tab-group {
+            display: flex;
             margin-bottom: 25px;
-            font-weight: bold;
+            background-color: #e1f5fe;
+            border-radius: 10px;
+            overflow: hidden;
         }
-        .input-group {
-            margin-bottom: 18px;
-            text-align: left;
+        .tab-btn {
+            flex: 1; padding: 10px; border: none; background: none;
+            cursor: pointer; font-weight: bold; color: #0288d1; transition: 0.3s;
         }
-        /* 💡 標籤置於框外正上方、小字體精緻化 */
+        .tab-btn.active {
+            background-color: #29b6f6; color: white;
+        }
+
+        /* 🧑‍🏫 身分選擇區 (讀者 / 管理員) */
+        .role-selector {
+            display: flex; justify-content: center; gap: 20px;
+            margin-bottom: 20px; font-size: 14px; color: #0277bd; font-weight: bold;
+        }
+        .role-selector label { cursor: pointer; }
+
+        /* 📝 輸入框與小字體提示 */
+        .input-group { text-align: left; margin-bottom: 15px; }
         .input-group label {
-            display: block;
-            font-size: 13px; 
-            color: #0288d1;
-            margin-bottom: 6px;
-            font-weight: bold;
+            display: block; font-size: 12px; color: #0277bd;
+            font-weight: bold; margin-bottom: 5px; margin-left: 5px;
         }
-        /* ⌨️ 留白的輸入框 */
         .input-group input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #b3e5fc;
-            border-radius: 12px;
-            box-sizing: border-box;
-            outline: none;
-            transition: 0.3s;
+            width: 100%; padding: 10px; border: 2px solid #b3e5fc;
+            border-radius: 8px; outline: none; box-sizing: border-box; transition: 0.3s;
         }
-        .input-group input:focus {
-            border-color: #0288d1;
+        .input-group input:focus { border-color: #0288d1; }
+
+        /* 🔘 確認按鈕 */
+        .submit-btn {
+            background-color: #0288d1; color: white; border: none;
+            padding: 12px; border-radius: 8px; width: 100%; cursor: pointer;
+            font-weight: bold; font-size: 16px; margin-top: 10px; transition: 0.3s;
         }
-        /* 🚀 現代感登入按鈕 */
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background-color: #0288d1;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 15px;
-            transition: 0.3s;
-        }
-        .btn-login:hover {
-            background-color: #0277bd;
-        }
-        .footer-links {
-            margin-top: 20px;
-            font-size: 13px;
-        }
-        .footer-links a {
-            color: #0288d1;
-            text-decoration: none;
-        }
-        .footer-links a:hover {
-            text-decoration: underline;
-        }
+        .submit-btn:hover { background-color: #01579b; transform: translateY(-2px); }
+
+        /* 🪄 用來隱藏表單的魔法 */
+        .form-section { display: none; }
+        .form-section.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <div class="login-card">
-        <h2>🌊 海底圖書館</h2>
-        
-        <div class="input-group">
-            <label>使用者名稱</label>
-            <input type="text" id="username">
+    <div class="auth-container">
+        <div class="mascot">🐙</div>
+        <h2>海底圖書館</h2>
+
+        <div class="tab-group">
+            <button id="btnTabLogin" class="tab-btn active" onclick="switchTab('login')">登入</button>
+            <button id="btnTabReg" class="tab-btn" onclick="switchTab('register')">註冊新帳號</button>
         </div>
-        
-        <div class="input-group">
-            <label>密碼</label>
-            <input type="password" id="password">
+
+        <div id="secLogin" class="form-section active">
+            
+            <div class="role-selector">
+                <label><input type="radio" name="loginRole" value="user" checked> 一般讀者</label>
+                <label><input type="radio" name="loginRole" value="admin"> 管理員</label>
+            </div>
+
+            <div class="input-group">
+                <label>使用者帳號 (學號/證號)</label>
+                <input type="text" id="loginId" placeholder="請輸入帳號">
+            </div>
+            <div class="input-group">
+                <label>密碼</label>
+                <input type="password" id="loginPwd" placeholder="請輸入密碼">
+            </div>
+            <button class="submit-btn" onclick="doLogin()">登入系統 🫧</button>
         </div>
-        
-        <button class="btn-login" onclick="doLogin()">登入</button>
-        
-        <div class="footer-links">
-            <a href="#">註冊/忘記密碼?</a>
+
+        <div id="secRegister" class="form-section">
+            <div class="input-group">
+                <label>帳號</label>
+                <input type="text" id="regId" placeholder="例: 123456">
+            </div>
+            <div class="input-group">
+                <label>姓名</label>
+                <input type="text" id="regName" placeholder="請輸入姓名">
+            </div>
+            <div class="input-group">
+                <label>設定密碼</label>
+                <input type="password" id="regPwd" placeholder="請設定一組密碼">
+            </div>
+            <div class="input-group">
+                <label>再次確認密碼</label>
+                <input type="password" id="regPwdConfirm" placeholder="請再次輸入密碼">
+            </div>
+            <button class="submit-btn" style="background-color: #009688;" onclick="doRegister()">完成註冊 🐳</button>
         </div>
+
     </div>
 
     <script>
-        function doLogin() {
-            const u = document.getElementById('username').value;
-            const p = document.getElementById('password').value;
+        const SERVER_PORT = "8080"; // 💡 若你的 Java 是 8081，請改這裡
+        const BASE_URL = `http://localhost:${SERVER_PORT}/api`;
 
-            if(!u || !p) {
-                alert("請完整輸入使用者名稱與密碼！");
-                return;
+        // 🪄 切換登入與註冊介面
+        function switchTab(mode) {
+            document.getElementById('secLogin').classList.remove('active');
+            document.getElementById('secRegister').classList.remove('active');
+            document.getElementById('btnTabLogin').classList.remove('active');
+            document.getElementById('btnTabReg').classList.remove('active');
+
+            if(mode === 'login') {
+                document.getElementById('secLogin').classList.add('active');
+                document.getElementById('btnTabLogin').classList.add('active');
+            } else {
+                document.getElementById('secRegister').classList.add('active');
+                document.getElementById('btnTabReg').classList.add('active');
             }
+        }
 
-            // 呼叫 Java 外送員進行驗證
-            fetch(`http://localhost:8080/api/login?username=${u}&password=${p}`)
+        // 🌟 處理登入邏輯與身分分流
+        function doLogin() {
+            const u = document.getElementById('loginId').value;
+            const p = document.getElementById('loginPwd').value;
+            
+            // 🔑 抓取畫面上目前勾選的是 一般讀者(user) 還是 管理員(admin)
+            const role = document.querySelector('input[name="loginRole"]:checked').value;
+
+            if(!u || !p) { alert("請完整輸入帳號與密碼！"); return; }
+
+            // 🚀 【升級重點】把 &role=${role} 順便塞進網址裡傳過去！
+            fetch(`${BASE_URL}/login?username=${u}&password=${p}&role=${role}`)
                 .then(res => res.json())
                 .then(data => {
                     if(data.success) {
-                        alert("登入成功！歡迎來到海底圖書館 🐠");
-                        // 成功後，自動跳轉到你之前做好的管理員大廳！
-                        window.location.href = 'index.html'; 
+                        const finalName = data.name || u;
+                        const finalRole = data.role || "一般會員";
+                        const finalDays = data.borrowDays || 14;
+
+                        sessionStorage.setItem("studentNo", data.studentNo || u);
+                        sessionStorage.setItem("userName", finalName);
+                        sessionStorage.setItem("userRole", finalRole);
+                        sessionStorage.setItem("borrowDays", finalDays);
+                        
+                        alert(`登入成功！歡迎回來 ${finalName} 🐠`);
+
+                        // 根據勾選的角色進行跳轉分流
+                        if (role === 'admin') {
+                            window.location.href = 'index.html'; // 管理員後台
+                        } else {
+                            window.location.href = 'dashboard.html'; // 讀者大廳
+                        }
                     } else {
-                        alert("登入失敗：使用者名稱或密碼錯誤！");
+                        // 🛡️ 這裡的提示文字改得更全面
+                        alert("❌ 登入失敗：帳號密碼錯誤，或者您的身分與選擇的登入模式不符！");
+                    }
+                })
+                .catch(err => { alert("連線失敗！請確認 Java 伺服器已啟動。"); console.error(err); });
+        }
+        // 🌟 處理註冊邏輯
+        function doRegister() {
+            const id = document.getElementById('regId').value;
+            const name = document.getElementById('regName').value;
+            const pwd = document.getElementById('regPwd').value;
+            const pwdConfirm = document.getElementById('regPwdConfirm').value;
+
+            // 1. 防呆檢查
+            if(!id || !name || !pwd || !pwdConfirm) { 
+                alert("請完整填寫所有註冊資料喔！"); 
+                return; 
+            }
+            if(pwd !== pwdConfirm) {
+                alert("❌ 兩次密碼輸入不一致，請重新檢查！");
+                return; 
+            }
+
+            // 2. 發送註冊請求
+            console.log("正在發送註冊請求...");
+            fetch(`${BASE_URL}/register?studentNo=${id}&name=${encodeURIComponent(name)}&password=${pwd}`)
+                .then(res => {
+                    if (!res.ok) throw new Error("伺服器回應錯誤: " + res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    // ✨ 這裡是除錯關鍵：如果有錯誤，F12 的 Console 會印出來
+                    console.log("後端回傳資料:", data); 
+                    
+                    if(data.success) {
+                        alert("🎉 註冊成功！請切換到登入畫面進行登入。");
+                        switchTab('login');
+                        document.getElementById('loginId').value = id; 
+                    } else {
+                        // 💡 data.message 就是我們在 Java 端寫的「此學號已被註冊！」
+                        alert("❌ 註冊失敗：" + data.message);
                     }
                 })
                 .catch(err => {
-                    alert("連線失敗！請確認你的 Java 伺服器有在運行喔！");
-                    console.error(err);
+                    console.error("錯誤詳情:", err);
+                    alert("連線失敗，請檢查終端機的錯誤訊息！");
                 });
         }
     </script>
