@@ -175,27 +175,38 @@ public class BookDAO {
                     }
                 }
 
-                // 4️⃣ 第四關：檢查書籍狀態是否真的是「可借閱」
+                // 4️⃣ 第四關：檢查書籍狀態是否真的是「可借」
                 String bookSql = "SELECT status FROM Books WHERE book_id = ?";
                 try (java.sql.PreparedStatement pstmt = conn.prepareStatement(bookSql)) {
                     pstmt.setInt(1, bookId);
                     java.sql.ResultSet rs = pstmt.executeQuery();
                     if (rs.next()) {
+                        // 取得資料庫真實狀態，轉大寫並去除空白方便比對
                         String status = rs.getString("status");
-                        if (!"可借閱".equals(status) && !"在館".equals(status)) {
+                        String checkStatus = (status != null) ? status.trim().toUpperCase() : "";
+                        
+                        // 🛡️ 終極寬鬆防呆：只要包含這些關鍵字，通通准許借！
+                        boolean canBorrow = checkStatus.contains("可借") || 
+                                            checkStatus.contains("在館") || 
+                                            checkStatus.contains("在庫") || 
+                                            checkStatus.contains("AVAIL");
+                                            
+                        if (!canBorrow) {
                             return "這本書目前無法借閱 (狀態: " + status + ")！";
                         }
                     } else {
                         return "館藏中找不到這本書！";
                     }
                 }
-
-                // 📝 最終執行 A：將書籍狀態改為「已借出」
-                String updateBookSql = "UPDATE Books SET status = '已借出' WHERE book_id = ?";
+                
+                // 📝 最終執行 A：將書籍狀態改為英文的「BORROWED」
+                // 🚨 修正：絕對不能寫中文的 '借出'，要配合資料庫的格式寫 'BORROWED'
+                String updateBookSql = "UPDATE Books SET status = 'BORROWED' WHERE book_id = ?";
                 try (java.sql.PreparedStatement pstmt = conn.prepareStatement(updateBookSql)) {
                     pstmt.setInt(1, bookId);
                     pstmt.executeUpdate();
                 }
+
 
                 // 📝 最終執行 B：寫入借閱紀錄
                 String insertRecordSql = "INSERT INTO Borrow_records (user_id, book_id, borrow_date, due_date, borrow_days) VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? DAY), ?)";

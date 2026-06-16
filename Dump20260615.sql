@@ -1,1 +1,0 @@
-INSERT INTO Users (student_no, name, password, role) VALUES ('test123', '測試人員', '123', '一般會員');

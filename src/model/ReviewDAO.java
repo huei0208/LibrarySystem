@@ -53,9 +53,16 @@ public class ReviewDAO {
                         date = date.substring(0, 16); // 截斷秒數讓畫面乾淨點
                     }
                     
+                    // 🛡️ 修正重點：改用迴圈產生星星，徹底解決 Java 8 不支援 repeat() 的崩潰問題
+                    int rating = rs.getInt("rating");
+                    StringBuilder starsBuilder = new StringBuilder();
+                    for(int i = 0; i < rating; i++) {
+                        starsBuilder.append("⭐ ");
+                    }
+                    
                     list.add(new Object[]{
                         rs.getString("name"),
-                        "⭐ ".repeat(rs.getInt("rating")), // 把數字轉換成星星符號
+                        starsBuilder.toString(), // 安全的星星字串
                         rs.getString("comment"),
                         date
                     });
