@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="utf-8">
+    <title>海底圖書館 - 管理者後台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
+    <link href="css/sb-admin-2.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: "Microsoft JhengHei", Arial, sans-serif;
+        }
+
+        .section-page {
+            display: none;
+        }
+
+        .section-page.active {
+            display: block;
+        }
+
+        .table td,
+        .table th {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+
+<body id="page-top">
+
+<div id="wrapper">
+
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion">
+
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="#" onclick="showSection('dashboard')">
+            <div class="sidebar-brand-icon rotate-n-15">
+                <i class="fas fa-book-reader"></i>
+            </div>
+            <div class="sidebar-brand-text mx-3">管理者後台</div>
+        </a>
+
+        <hr class="sidebar-divider my-0">
+
+        <li class="nav-item active">
+            <a class="nav-link" href="#" onclick="showSection('dashboard')">
+                <i class="fas fa-fw fa-tachometer-alt"></i>
+                <span>首頁總覽</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showSection('books')">
+                <i class="fas fa-fw fa-book"></i>
+                <span>書籍管理</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showSection('users')">
+                <i class="fas fa-fw fa-users"></i>
+                <span>學生帳號管理</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showSection('records')">
+                <i class="fas fa-fw fa-history"></i>
+                <span>全校借還紀錄</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showSection('reviews')">
+                <i class="fas fa-fw fa-star"></i>
+                <span>書評管理</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="#" onclick="showSection('stats')">
+                <i class="fas fa-fw fa-chart-bar"></i>
+                <span>借閱統計</span>
+            </a>
+        </li>
+
+        <hr class="sidebar-divider">
+
+        <li class="nav-item">
+            <a class="nav-link" href="login.html">
+                <i class="fas fa-fw fa-sign-out-alt"></i>
+                <span>返回登入頁</span>
+            </a>
+        </li>
+
+    </ul>
+
+    <div id="content-wrapper" class="d-flex flex-column">
+
+        <div id="content">
+
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+                <h5 class="mb-0 text-gray-800">海底圖書館管理者後台</h5>
+            </nav>
+
+            <div class="container-fluid">
+
+                <div id="dashboard" class="section-page active">
+                    <h1 class="h3 mb-4 text-gray-800">首頁總覽</h1>
+
+                    <div class="row">
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-primary shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">書籍總數</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="bookCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-success shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">學生會員</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="userCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-warning shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">借閱中</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="borrowingCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-left-danger shadow h-100 py-2">
+                                <div class="card-body">
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">逾期未還</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="overdueCount">0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="loadAll()">重新整理資料</button>
+                </div>
+
+                <div id="books" class="section-page">
+                    <h1 class="h3 mb-4 text-gray-800">書籍管理</h1>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">新增書籍</h6>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="col-md-3 mb-2">
+                                    <input class="form-control" id="bookTitle" placeholder="書名">
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input class="form-control" id="bookAuthors" placeholder="作者">
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input class="form-control" id="bookSubjects" placeholder="主題">
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input class="form-control" id="bookPublisher" placeholder="出版社">
+                                </div>
+                                <div class="col-md-1 mb-2">
+                                    <input class="form-control" id="bookYear" placeholder="年份">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-success" onclick="addBook()">新增書籍</button>
+                        </div>
+                    </div>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex">
+                            <h6 class="m-0 font-weight-bold text-primary mr-auto">書籍列表</h6>
+                            <input class="form-control form-control-sm w-25 mr-2" id="bookKeyword" placeholder="搜尋書名、作者、主題">
+                            <button class="btn btn-sm btn-primary" onclick="loadBooks()">搜尋</button>
+                        </div>
+
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>書名</th>
+                                    <th>作者</th>
+                                    <th>主題</th>
+                                    <th>出版社</th>
+                                    <th>年份</th>
+                                    <th>狀態</th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody id="booksTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="users" class="section-page">
+                    <h1 class="h3 mb-4 text-gray-800">學生帳號管理</h1>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex">
+                            <h6 class="m-0 font-weight-bold text-primary mr-auto">學生列表</h6>
+                            <button class="btn btn-sm btn-primary" onclick="loadUsers()">重新整理</button>
+                        </div>
+
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>學號</th>
+                                    <th>姓名</th>
+                                    <th>權限</th>
+                                    <th>狀態</th>
+                                    <th>帳號狀態</th>
+                                    <th>會員權限</th>
+                                </tr>
+                                </thead>
+                                <tbody id="usersTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="records" class="section-page">
+                    <h1 class="h3 mb-4 text-gray-800">全校借還紀錄</h1>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex">
+                            <h6 class="m-0 font-weight-bold text-primary mr-auto">借還紀錄</h6>
+                            <input class="form-control form-control-sm w-25 mr-2" id="recordKeyword" placeholder="搜尋學號、姓名、書名">
+                            <button class="btn btn-sm btn-primary" onclick="loadRecords()">搜尋</button>
+                        </div>
+
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>學號</th>
+                                    <th>姓名</th>
+                                    <th>書名</th>
+                                    <th>借出時間</th>
+                                    <th>應還時間</th>
+                                    <th>歸還狀態</th>
+                                </tr>
+                                </thead>
+                                <tbody id="recordsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="reviews" class="section-page">
+                    <h1 class="h3 mb-4 text-gray-800">書評管理</h1>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex">
+                            <h6 class="m-0 font-weight-bold text-primary mr-auto">全校書評</h6>
+                            <button class="btn btn-sm btn-primary" onclick="loadReviews()">重新整理</button>
+                        </div>
+
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>書名</th>
+                                    <th>留言者</th>
+                                    <th>評分</th>
+                                    <th>留言內容</th>
+                                    <th>時間</th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody id="reviewsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="stats" class="section-page">
+                    <h1 class="h3 mb-4 text-gray-800">借閱統計</h1>
+
+                    <div class="card shadow mb-4">
+                        <div class="card-header py-3 d-flex">
+                            <h6 class="m-0 font-weight-bold text-primary mr-auto">熱門主題排行</h6>
+                            <button class="btn btn-sm btn-primary" onclick="loadStats()">重新整理</button>
+                        </div>
+
+                        <div class="card-body table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                <tr>
+                                    <th>主題</th>
+                                    <th>借閱次數</th>
+                                </tr>
+                                </thead>
+                                <tbody id="statsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="vendor/jquery/jquery.min.js"></script>
+<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+<script src="js/sb-admin-2.min.js"></script>
+
+<script>
+    const API = "http://localhost:8081/api/admin";
+
+    document.addEventListener("DOMContentLoaded", function () {
+        loadAll();
+    });
+
+    function showSection(id) {
+        document.querySelectorAll(".section-page").forEach(page => {
+            page.classList.remove("active");
+        });
+
+        document.getElementById(id).classList.add("active");
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return "";
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;");
+    }
+
+    function apiGet(path) {
+        return fetch(API + path).then(res => res.json());
+    }
+
+    function loadAll() {
+        loadDashboard();
+        loadBooks();
+        loadUsers();
+        loadRecords();
+        loadReviews();
+        loadStats();
+    }
+
+    function loadDashboard() {
+        apiGet("/dashboard")
+            .then(data => {
+                document.getElementById("bookCount").innerText = data.bookCount ?? 0;
+                document.getElementById("userCount").innerText = data.userCount ?? 0;
+                document.getElementById("borrowingCount").innerText = data.borrowingCount ?? 0;
+                document.getElementById("overdueCount").innerText = data.overdueCount ?? 0;
+            });
+    }
+
+    function loadBooks() {
+        const keyword = encodeURIComponent(document.getElementById("bookKeyword")?.value || "");
+
+        apiGet("/books?keyword=" + keyword)
+            .then(data => {
+                const tbody = document.getElementById("booksTableBody");
+                tbody.innerHTML = "";
+
+                data.forEach(book => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${book.book_id}</td>
+                            <td>${escapeHtml(book.title)}</td>
+                            <td>${escapeHtml(book.authors)}</td>
+                            <td>${escapeHtml(book.subjects)}</td>
+                            <td>${escapeHtml(book.publisher)}</td>
+                            <td>${escapeHtml(book.publish_year)}</td>
+                            <td>${escapeHtml(book.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteBook(${book.book_id})">下架</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    function addBook() {
+        const body = new URLSearchParams();
+        body.append("title", document.getElementById("bookTitle").value);
+        body.append("authors", document.getElementById("bookAuthors").value);
+        body.append("subjects", document.getElementById("bookSubjects").value);
+        body.append("publisher", document.getElementById("bookPublisher").value);
+        body.append("publish_year", document.getElementById("bookYear").value);
+
+        fetch(API + "/books", {
+            method: "POST",
+            headers: {"Content-Type": "application/x-www-form-urlencoded"},
+            body: body.toString()
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("新增書籍成功");
+                    loadBooks();
+                    loadDashboard();
+                } else {
+                    alert("新增失敗");
+                }
+            });
+    }
+
+    function deleteBook(id) {
+        if (!confirm("確定要下架這本書嗎？")) return;
+
+        fetch(API + "/books?id=" + id, {method: "DELETE"})
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("下架成功");
+                    loadBooks();
+                    loadDashboard();
+                } else {
+                    alert("下架失敗");
+                }
+            });
+    }
+
+    function loadUsers() {
+        apiGet("/users")
+            .then(data => {
+                const tbody = document.getElementById("usersTableBody");
+                tbody.innerHTML = "";
+
+                data.forEach(user => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${user.user_id}</td>
+                            <td>${escapeHtml(user.student_no)}</td>
+                            <td>${escapeHtml(user.name)}</td>
+                            <td>${escapeHtml(user.role_level)}</td>
+                            <td>${escapeHtml(user.status)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="updateUserStatus(${user.user_id}, 'SUSPENDED')">停權</button>
+                                <button class="btn btn-sm btn-success" onclick="updateUserStatus(${user.user_id}, 'ACTIVE')">復權</button>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="updateUserRole(${user.user_id}, 'VIP')">升級 VIP</button>
+                                <button class="btn btn-sm btn-secondary" onclick="updateUserRole(${user.user_id}, 'NORMAL')">降級一般</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    function updateUserStatus(id, status) {
+        fetch(API + `/users?id=${id}&status=${status}`, {method: "PATCH"})
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) loadUsers();
+                else alert("更新狀態失敗");
+            });
+    }
+
+    function updateUserRole(id, role) {
+        fetch(API + `/users?id=${id}&role=${role}`, {method: "PATCH"})
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) loadUsers();
+                else alert("更新權限失敗");
+            });
+    }
+
+    function loadRecords() {
+        const keyword = encodeURIComponent(document.getElementById("recordKeyword")?.value || "");
+
+        apiGet("/records?keyword=" + keyword)
+            .then(data => {
+                const tbody = document.getElementById("recordsTableBody");
+                tbody.innerHTML = "";
+
+                data.forEach(record => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${escapeHtml(record.student_no)}</td>
+                            <td>${escapeHtml(record.name)}</td>
+                            <td>${escapeHtml(record.title)}</td>
+                            <td>${escapeHtml(record.borrow_date)}</td>
+                            <td>${escapeHtml(record.due_date)}</td>
+                            <td>${escapeHtml(record.return_date)}</td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    function loadReviews() {
+        apiGet("/reviews")
+            .then(data => {
+                const tbody = document.getElementById("reviewsTableBody");
+                tbody.innerHTML = "";
+
+                data.forEach(review => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${review.review_id}</td>
+                            <td>${escapeHtml(review.title)}</td>
+                            <td>${escapeHtml(review.name)}</td>
+                            <td>${"⭐".repeat(review.rating)}</td>
+                            <td>${escapeHtml(review.comment)}</td>
+                            <td>${escapeHtml(review.created_at)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-danger" onclick="deleteReview(${review.review_id})">刪除</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+
+    function deleteReview(id) {
+        if (!confirm("確定要刪除這則書評嗎？")) return;
+
+        fetch(API + "/reviews?id=" + id, {method: "DELETE"})
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert("刪除成功");
+                    loadReviews();
+                    loadDashboard();
+                } else {
+                    alert("刪除失敗");
+                }
+            });
+    }
+
+    function loadStats() {
+        apiGet("/stats")
+            .then(data => {
+                const tbody = document.getElementById("statsTableBody");
+                tbody.innerHTML = "";
+
+                data.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${escapeHtml(item.subject)}</td>
+                            <td>${item.count}</td>
+                        </tr>
+                    `;
+                });
+            });
+    }
+</script>
+
+</body>
+</html>
