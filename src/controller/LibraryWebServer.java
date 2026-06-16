@@ -802,7 +802,6 @@ public class LibraryWebServer {
     static class ReserveHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange t) throws IOException {
-            // 🛡️ 照慣例：加上最強的 CORS 許可證防護罩
             t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
             t.getResponseHeaders().add("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
             t.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
@@ -816,7 +815,6 @@ public class LibraryWebServer {
             String studentNo = "";
             int bookId = -1;
 
-            // 解析網址傳來的學號與書籍ID
             if (query != null) {
                 for (String param : query.split("&")) {
                     if (param.startsWith("studentNo=")) studentNo = param.split("=")[1];
@@ -841,7 +839,8 @@ public class LibraryWebServer {
 
                     if (userId != -1) {
                         try (java.sql.Connection conn = model.DBUtil.getConnection()) {
-                            // 2. 檢查是不是已經預約過這本書了 (防止重複排隊)
+                            
+                            // 🛡️ 防呆 A：檢查是不是已經預約過這本書了
                             boolean alreadyReserved = false;
                             String checkSql = "SELECT 1 FROM Reservations WHERE user_id = ? AND book_id = ? AND status = 'PENDING'";
                             try (java.sql.PreparedStatement pstmt = conn.prepareStatement(checkSql)) {
@@ -851,11 +850,25 @@ public class LibraryWebServer {
                                 if (rs.next()) alreadyReserved = true;
                             }
 
-                            if (alreadyReserved) {
+                            // 🛡️ 防呆 B (你的神邏輯！)：檢查這本書是不是他自己正在借！
+                            boolean isCurrentlyBorrowing = false;
+                            // 尋找借閱紀錄中，還沒歸還 (return_date IS NULL) 且是這本書、這個人的紀錄
+                            String checkBorrowSql = "SELECT 1 FROM Borrow_records WHERE user_id = ? AND book_id = ? AND return_date IS NULL";
+                            try (java.sql.PreparedStatement pstmt = conn.prepareStatement(checkBorrowSql)) {
+                                pstmt.setInt(1, userId);
+                                pstmt.setInt(2, bookId);
+                                java.sql.ResultSet rs = pstmt.executeQuery();
+                                if (rs.next()) isCurrentlyBorrowing = true;
+                            }
+
+                            // 🚦 審判時間：根據各種防呆結果給出回應
+                            if (isCurrentlyBorrowing) {
+                                message = "❌ 預約失敗：您目前正在借閱這本書喔！無法預約自己手上的書！🐙";
+                            } else if (alreadyReserved) {
                                 message = "您已經在這本書的排隊名單中囉！請耐心等候 🫧";
                             } else {
                                 // 3. 正式寫入預約紀錄表
-                                String insertSql = "INSERT INTO Reservations (user_id, book_id, reservation_date, status) VALUES (?, ?, NOW(), 'PENDING')";
+                                String insertSql = "INSERT INTO Reservations (user_id, book_id, reserve_date, status) VALUES (?, ?, NOW(), 'PENDING')";
                                 try (java.sql.PreparedStatement pstmt = conn.prepareStatement(insertSql)) {
                                     pstmt.setInt(1, userId);
                                     pstmt.setInt(2, bookId);
