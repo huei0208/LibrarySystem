@@ -26,6 +26,10 @@
         .table th {
             vertical-align: middle;
         }
+
+        .chart-area-custom {
+            height: 360px;
+        }
     </style>
 </head>
 
@@ -33,6 +37,7 @@
 
 <div id="wrapper">
 
+    <!-- 左側選單 -->
     <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion">
 
         <a class="sidebar-brand d-flex align-items-center justify-content-center" href="#" onclick="showSection('dashboard')">
@@ -44,7 +49,7 @@
 
         <hr class="sidebar-divider my-0">
 
-        <li class="nav-item active">
+        <li class="nav-item">
             <a class="nav-link" href="#" onclick="showSection('dashboard')">
                 <i class="fas fa-fw fa-tachometer-alt"></i>
                 <span>首頁總覽</span>
@@ -97,6 +102,7 @@
 
     </ul>
 
+    <!-- 右側內容 -->
     <div id="content-wrapper" class="d-flex flex-column">
 
         <div id="content">
@@ -107,6 +113,7 @@
 
             <div class="container-fluid">
 
+                <!-- 首頁總覽 -->
                 <div id="dashboard" class="section-page active">
                     <h1 class="h3 mb-4 text-gray-800">首頁總覽</h1>
 
@@ -151,6 +158,7 @@
                     <button class="btn btn-primary" onclick="loadAll()">重新整理資料</button>
                 </div>
 
+                <!-- 書籍管理 -->
                 <div id="books" class="section-page">
                     <h1 class="h3 mb-4 text-gray-800">書籍管理</h1>
 
@@ -209,6 +217,7 @@
                     </div>
                 </div>
 
+                <!-- 學生帳號管理 -->
                 <div id="users" class="section-page">
                     <h1 class="h3 mb-4 text-gray-800">學生帳號管理</h1>
 
@@ -237,6 +246,7 @@
                     </div>
                 </div>
 
+                <!-- 全校借還紀錄 -->
                 <div id="records" class="section-page">
                     <h1 class="h3 mb-4 text-gray-800">全校借還紀錄</h1>
 
@@ -265,6 +275,7 @@
                     </div>
                 </div>
 
+                <!-- 書評管理 -->
                 <div id="reviews" class="section-page">
                     <h1 class="h3 mb-4 text-gray-800">書評管理</h1>
 
@@ -293,19 +304,54 @@
                     </div>
                 </div>
 
+                <!-- 借閱統計 -->
                 <div id="stats" class="section-page">
                     <h1 class="h3 mb-4 text-gray-800">借閱統計</h1>
 
+                    <div class="row">
+
+                        <!-- 柱狀圖 -->
+                        <div class="col-xl-7 col-lg-7">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3 d-flex">
+                                    <h6 class="m-0 font-weight-bold text-primary mr-auto">主題借閱次數柱狀圖</h6>
+                                    <button class="btn btn-sm btn-primary" onclick="loadStats()">重新整理</button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-area-custom">
+                                        <canvas id="barChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 圓餅圖 -->
+                        <div class="col-xl-5 col-lg-5">
+                            <div class="card shadow mb-4">
+                                <div class="card-header py-3">
+                                    <h6 class="m-0 font-weight-bold text-primary">主題借閱比例圓餅圖</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-area-custom">
+                                        <canvas id="pieChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- 熱門主題排行表 -->
                     <div class="card shadow mb-4">
-                        <div class="card-header py-3 d-flex">
-                            <h6 class="m-0 font-weight-bold text-primary mr-auto">熱門主題排行</h6>
-                            <button class="btn btn-sm btn-primary" onclick="loadStats()">重新整理</button>
+                        <div class="card-header py-3">
+                            <h6 class="m-0 font-weight-bold text-primary">熱門主題排行</h6>
                         </div>
 
                         <div class="card-body table-responsive">
                             <table class="table table-bordered">
                                 <thead>
                                 <tr>
+                                    <th>排名</th>
                                     <th>主題</th>
                                     <th>借閱次數</th>
                                 </tr>
@@ -325,9 +371,13 @@
 <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
 <script src="js/sb-admin-2.min.js"></script>
+<script src="vendor/chart.js/Chart.min.js"></script>
 
 <script>
     const API = "http://localhost:8081/api/admin";
+
+    let barChart = null;
+    let pieChart = null;
 
     document.addEventListener("DOMContentLoaded", function () {
         loadAll();
@@ -339,15 +389,20 @@
         });
 
         document.getElementById(id).classList.add("active");
+
+        if (id === "stats") {
+            loadStats();
+        }
     }
 
     function escapeHtml(value) {
         if (value === null || value === undefined) return "";
+
         return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;");
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
     }
 
     function apiGet(path) {
@@ -370,7 +425,8 @@
                 document.getElementById("userCount").innerText = data.userCount ?? 0;
                 document.getElementById("borrowingCount").innerText = data.borrowingCount ?? 0;
                 document.getElementById("overdueCount").innerText = data.overdueCount ?? 0;
-            });
+            })
+            .catch(err => console.error("載入首頁總覽失敗", err));
     }
 
     function loadBooks() {
@@ -397,16 +453,28 @@
                         </tr>
                     `;
                 });
-            });
+            })
+            .catch(err => console.error("載入書籍失敗", err));
     }
 
     function addBook() {
+        const title = document.getElementById("bookTitle").value.trim();
+        const authors = document.getElementById("bookAuthors").value.trim();
+        const subjects = document.getElementById("bookSubjects").value.trim();
+        const publisher = document.getElementById("bookPublisher").value.trim();
+        const publishYear = document.getElementById("bookYear").value.trim();
+
+        if (!title || !authors || !subjects || !publisher || !publishYear) {
+            alert("請完整填寫書名、作者、主題、出版社、年份");
+            return;
+        }
+
         const body = new URLSearchParams();
-        body.append("title", document.getElementById("bookTitle").value);
-        body.append("authors", document.getElementById("bookAuthors").value);
-        body.append("subjects", document.getElementById("bookSubjects").value);
-        body.append("publisher", document.getElementById("bookPublisher").value);
-        body.append("publish_year", document.getElementById("bookYear").value);
+        body.append("title", title);
+        body.append("authors", authors);
+        body.append("subjects", subjects);
+        body.append("publisher", publisher);
+        body.append("publish_year", publishYear);
 
         fetch(API + "/books", {
             method: "POST",
@@ -417,11 +485,23 @@
             .then(data => {
                 if (data.success) {
                     alert("新增書籍成功");
+
+                    document.getElementById("bookTitle").value = "";
+                    document.getElementById("bookAuthors").value = "";
+                    document.getElementById("bookSubjects").value = "";
+                    document.getElementById("bookPublisher").value = "";
+                    document.getElementById("bookYear").value = "";
+
                     loadBooks();
                     loadDashboard();
+                    loadStats();
                 } else {
-                    alert("新增失敗");
+                    alert("新增失敗：" + (data.message || "未知錯誤"));
                 }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("新增失敗：無法連線到 AdminWebServer");
             });
     }
 
@@ -435,10 +515,12 @@
                     alert("下架成功");
                     loadBooks();
                     loadDashboard();
+                    loadStats();
                 } else {
                     alert("下架失敗");
                 }
-            });
+            })
+            .catch(err => console.error("下架書籍失敗", err));
     }
 
     function loadUsers() {
@@ -466,25 +548,34 @@
                         </tr>
                     `;
                 });
-            });
+            })
+            .catch(err => console.error("載入學生失敗", err));
     }
 
     function updateUserStatus(id, status) {
         fetch(API + `/users?id=${id}&status=${status}`, {method: "PATCH"})
             .then(res => res.json())
             .then(data => {
-                if (data.success) loadUsers();
-                else alert("更新狀態失敗");
-            });
+                if (data.success) {
+                    loadUsers();
+                } else {
+                    alert("更新狀態失敗");
+                }
+            })
+            .catch(err => console.error("更新狀態失敗", err));
     }
 
     function updateUserRole(id, role) {
         fetch(API + `/users?id=${id}&role=${role}`, {method: "PATCH"})
             .then(res => res.json())
             .then(data => {
-                if (data.success) loadUsers();
-                else alert("更新權限失敗");
-            });
+                if (data.success) {
+                    loadUsers();
+                } else {
+                    alert("更新權限失敗");
+                }
+            })
+            .catch(err => console.error("更新權限失敗", err));
     }
 
     function loadRecords() {
@@ -496,6 +587,12 @@
                 tbody.innerHTML = "";
 
                 data.forEach(record => {
+                    let returnText = escapeHtml(record.return_date);
+
+                    if (record.return_date === "尚未歸還") {
+                        returnText = `<span class="text-danger font-weight-bold">尚未歸還</span>`;
+                    }
+
                     tbody.innerHTML += `
                         <tr>
                             <td>${escapeHtml(record.student_no)}</td>
@@ -503,11 +600,12 @@
                             <td>${escapeHtml(record.title)}</td>
                             <td>${escapeHtml(record.borrow_date)}</td>
                             <td>${escapeHtml(record.due_date)}</td>
-                            <td>${escapeHtml(record.return_date)}</td>
+                            <td>${returnText}</td>
                         </tr>
                     `;
                 });
-            });
+            })
+            .catch(err => console.error("載入借還紀錄失敗", err));
     }
 
     function loadReviews() {
@@ -531,7 +629,8 @@
                         </tr>
                     `;
                 });
-            });
+            })
+            .catch(err => console.error("載入書評失敗", err));
     }
 
     function deleteReview(id) {
@@ -547,7 +646,8 @@
                 } else {
                     alert("刪除失敗");
                 }
-            });
+            })
+            .catch(err => console.error("刪除書評失敗", err));
     }
 
     function loadStats() {
@@ -556,15 +656,138 @@
                 const tbody = document.getElementById("statsTableBody");
                 tbody.innerHTML = "";
 
-                data.forEach(item => {
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">目前尚無借閱統計資料</td>
+                        </tr>
+                    `;
+
+                    drawBarChart([]);
+                    drawPieChart([]);
+                    return;
+                }
+
+                data.forEach((item, index) => {
                     tbody.innerHTML += `
                         <tr>
+                            <td>第 ${index + 1} 名</td>
                             <td>${escapeHtml(item.subject)}</td>
                             <td>${item.count}</td>
                         </tr>
                     `;
                 });
+
+                drawBarChart(data);
+                drawPieChart(data);
+            })
+            .catch(err => {
+                console.error("載入借閱統計失敗", err);
+                alert("載入借閱統計失敗，請確認 AdminWebServer 有啟動");
             });
+    }
+
+    function drawBarChart(data) {
+        const canvas = document.getElementById("barChart");
+
+        if (!canvas || typeof Chart === "undefined") {
+            return;
+        }
+
+        const labels = data.map(item => item.subject);
+        const counts = data.map(item => item.count);
+
+        if (barChart !== null) {
+            barChart.destroy();
+        }
+
+        barChart = new Chart(canvas, {
+            type: "bar",
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: "借閱次數",
+                    data: counts,
+                    backgroundColor: "#4e73df",
+                    borderColor: "#4e73df",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: "各主題借閱次數"
+                },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true,
+                            precision: 0
+                        }
+                    }],
+                    xAxes: [{
+                        ticks: {
+                            autoSkip: false
+                        }
+                    }]
+                }
+            }
+        });
+    }
+
+    function drawPieChart(data) {
+        const canvas = document.getElementById("pieChart");
+
+        if (!canvas || typeof Chart === "undefined") {
+            return;
+        }
+
+        const labels = data.map(item => item.subject);
+        const counts = data.map(item => item.count);
+
+        if (pieChart !== null) {
+            pieChart.destroy();
+        }
+
+        pieChart = new Chart(canvas, {
+            type: "pie",
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        "#4e73df",
+                        "#1cc88a",
+                        "#36b9cc",
+                        "#f6c23e",
+                        "#e74a3b",
+                        "#858796",
+                        "#5a5c69",
+                        "#20c9a6",
+                        "#2c9faf",
+                        "#f8d36b",
+                        "#6610f2",
+                        "#fd7e14"
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                title: {
+                    display: true,
+                    text: "各主題借閱比例"
+                },
+                legend: {
+                    position: "bottom"
+                }
+            }
+        });
     }
 </script>
 
