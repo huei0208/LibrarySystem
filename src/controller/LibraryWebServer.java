@@ -27,6 +27,9 @@ public class LibraryWebServer {
         server.createContext("/api/myReservations", new MyReservationHandler()); // ✨ 個人預約紀錄外送員
         server.createContext("/api/overdue", new OverdueHandler()); // ✨ 新增這條給逾期查詢
         server.createContext("/api/borrow", new BorrowHandler()); // 📤 新增：借書專屬櫃台
+        // ✨ 向伺服器註冊這兩個全新的點餐櫃台
+        server.createContext("/api/myFavorites", new MyFavoritesHandler());
+        server.createContext("/api/bookHistory", new BookHistoryHandler());
 
         // 3. 啟動伺服器！
         server.setExecutor(null); 
@@ -321,6 +324,159 @@ public class LibraryWebServer {
         }
     }
 
+    // =========================================================
+    // 🚚 櫃台 A：專門負責「拉取個人收藏書籍」的外送員 (/api/myFavorites)
+    // =========================================================
+    static class MyFavoritesHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            t.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+
+            String query = t.getRequestURI().getQuery();
+            String studentNo = "";
+            if (query != null && query.contains("studentNo=")) {
+                studentNo = query.split("studentNo=")[1].split("&")[0];
+            }
+
+            model.BookDAO bookDAO = new model.BookDAO();
+            
+            // 💡 智慧分流：因為 getFavoriteBooks 需要傳入資料庫內部的 int userId，
+            // 我們先透過學號 studentNo 來找出真實的 user_id
+            int userId = -1;
+            try (java.sql.Connection conn = model.DBUtil.getConnection();
+                 java.sql.PreparedStatement pstmt = conn.prepareStatement("SELECT user_id FROM Users WHERE student_no = ?")) {
+                pstmt.setString(1, studentNo);
+                java.sql.ResultSet rs = pstmt.executeQuery();
+                if (rs.next()) {
+                    userId = rs.getInt("user_id");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // 呼叫大腦撈取收藏
+            java.util.List<model.Book> favBooks = new java.util.ArrayList<>();
+            if (userId != -1) {
+                favBooks = bookDAO.getFavoriteBooks(userId);
+            }
+
+            // 打包成與 BookHandler 完全一致的 JSON 規格，這樣前端渲染才不會當機！
+            StringBuilder json = new StringBuilder("[\n");
+            for (int i = 0; i < favBooks.size(); i++) {
+                model.Book b = favBooks.get(i);
+                String status = (b.getStatus() != null) ? b.getStatus().toString() : "在庫";
+                
+                json.append("  {\n");
+                json.append("    \"book_id\": \"").append(b.getBookId()).append("\",\n");
+                json.append("    \"title\": \"").append(b.getTitle() != null ? b.getTitle().replace("\"", "\\\"") : "未知").append("\",\n");
+                json.append("    \"author\": \"").append(b.getAuthors() != null ? b.getAuthors().replace("\"", "\\\"") : "未知").append("\",\n");
+                json.append("    \"subject\": \"").append(b.getSubjects() != null ? b.getSubjects().replace("\"", "\\\"") : "未分類").append("\",\n");
+                json.append("    \"status\": \"").append(status).append("\"\n");
+                json.append("  }");
+                if (i < favBooks.size() - 1) json.append(",");
+                json.append("\n");
+            }
+            json.append("]");
+
+            byte[] response = json.toString().getBytes("UTF-8");
+            t.sendResponseHeaders(200, response.length);
+            OutputStream os = t.getResponseBody();
+            os.write(response);
+            os.close();
+        }
+    }
+
+    // =========================================================
+    // 🚚 櫃台 B：專門負責「拉取單一書籍歷史紀錄」的外送員 (/api/bookHistory)
+    // =========================================================
+    static class BookHistoryHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            t.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+
+            String query = t.getRequestURI().getQuery();
+            int bookId = -1;
+            if (query != null && query.contains("bookId=")) {
+                try {
+                    bookId = Integer.parseInt(query.split("bookId=")[1].split("&")[0]);
+                } catch (Exception e) {
+                    bookId = -1;
+                }
+            }
+
+            model.BookDAO bookDAO = new model.BookDAO();
+            // 呼叫你的強大大腦：回傳格式是 List<Object[]> -> [姓名, 借出時間, 歸還時間]
+            java.util.List<Object[]> history = bookDAO.getBookBorrowHistory(bookId);
+
+            // 將 List<Object[]> 打包成 JSON 雙維度陣列格式 [[欄位1, 欄位2], [欄位1, 欄位2]]
+            StringBuilder json = new StringBuilder("[\n");
+            for (int i = 0; i < history.size(); i++) {
+                Object[] row = history.get(i);
+                String name = row[0] != null ? row[0].toString() : "神祕讀者";
+                String borrowDate = row[1] != null ? row[1].toString() : "-";
+                String returnDate = row[2] != null ? row[2].toString() : ""; // 未歸還就直接傳空字串，前端會判斷
+
+                json.append("  [\"").append(name).append("\", \"").append(borrowDate).append("\", \"").append(returnDate).append("\"]");
+                if (i < history.size() - 1) json.append(",");
+                json.append("\n");
+            }
+            json.append("]");
+
+            byte[] response = json.toString().getBytes("UTF-8");
+            t.sendResponseHeaders(200, response.length);
+            OutputStream os = t.getResponseBody();
+            os.write(response);
+            os.close();
+        }
+    }
+
+    // =========================================================
+    // 🚚 櫃台：專門負責「拉取單一書籍所有書評」的外送員 (/api/bookReviews)
+    // =========================================================
+    static class BookReviewsHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange t) throws IOException {
+            t.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            t.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
+
+            String query = t.getRequestURI().getQuery();
+            int bookId = -1;
+            if (query != null && query.contains("bookId=")) {
+                try { bookId = Integer.parseInt(query.split("bookId=")[1].split("&")[0]); } 
+                catch (Exception e) {}
+            }
+
+            // ✨ 完美對接：改用你現成的 ReviewDAO
+            model.ReviewDAO reviewDAO = new model.ReviewDAO();
+            // 回傳格式：{留言者姓名, 星星數, 評論內容, 留言時間}
+            java.util.List<Object[]> reviews = reviewDAO.getReviewsByBook(bookId);
+
+            StringBuilder json = new StringBuilder("[\n");
+            for (int i = 0; i < reviews.size(); i++) {
+                Object[] row = reviews.get(i);
+                
+                String name = row[0] != null ? row[0].toString() : "匿名";
+                String stars = row[1] != null ? row[1].toString() : "";
+                String comment = row[2] != null ? row[2].toString().replace("\"", "\\\"").replace("\n", "\\n") : "";
+                String date = row[3] != null ? row[3].toString() : "";
+
+                // 將 4 個欄位塞進 JSON 陣列中
+                json.append("  [\"").append(name).append("\", \"").append(stars).append("\", \"").append(comment).append("\", \"").append(date).append("\"]");
+                
+                if (i < reviews.size() - 1) json.append(",");
+                json.append("\n");
+            }
+            json.append("]");
+
+            byte[] response = json.toString().getBytes("UTF-8");
+            t.sendResponseHeaders(200, response.length);
+            OutputStream os = t.getResponseBody();
+            os.write(response);
+            os.close();
+        }
+    }
     // =========================================================
     // 🚚 專門負責運送「個人預約紀錄」的外送員 (已串接真實資料庫)
     // =========================================================

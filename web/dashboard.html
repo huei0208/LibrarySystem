@@ -57,6 +57,10 @@
             
             <div id="search" class="page-section active">
                 <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">🔍 查詢館藏與辦理借閱</h3>
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="btnShowAll" style="background-color: #0288d1; color: white; border: none; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer;" onclick="changeBookMode('all')">📖 全部館藏</button>
+                    <button id="btnShowFav" style="background-color: white; color: #0288d1; border: 2px solid #b3e5fc; padding: 8px 16px; border-radius: 20px; font-weight: bold; cursor: pointer;" onclick="changeBookMode('fav')">❤️ 我的收藏</button>
+                </div>
                 <div id="bookGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px;">
                     <p style="color: gray;">書籍載入中... 🫧</p>
                 </div>
@@ -111,6 +115,7 @@
     <script>
         const SERVER_PORT = "8080"; 
         const BASE_URL = `http://localhost:${SERVER_PORT}/api`;
+        let currentBookMode = "all"; // 💡 預設是看全部書籍，點按鈕會切換成 'fav'
 
         const studentNo = sessionStorage.getItem("studentNo") || "未登入";
         const userName = sessionStorage.getItem("userName") || "讀者";
@@ -140,41 +145,50 @@
             else if (tabId === 'overdue') loadOverdueStatus(studentNo);
         }
 
+        // 🌟 升級版：支援「全部」與「收藏」一鍵切換
         function loadBooks() {
-            fetch(`${BASE_URL}/books`)
+            // 💡 根據目前模式決定網址，若是 fav 則加上 studentNo 參數
+            let fetchUrl = `${BASE_URL}/books`;
+            if (currentBookMode === 'fav') {
+                const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
+                fetchUrl = `${BASE_URL}/myFavorites?studentNo=${stdNo}`;
+            }
+
+            fetch(fetchUrl)
                 .then(res => res.json())
                 .then(data => {
                     if (!Array.isArray(data)) {
-                        console.error("後端回傳非陣列:", data);
-                        document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">後端回傳格式錯誤</p>`;
+                        console.error("後端回傳格式錯誤:", data);
+                        document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">無法載入書籍</p>`;
                         return;
                     }
 
                     let html = '';
-                    if (data.length === 0) {
-                        html = '<p style="color:gray; text-align:center; width:100%;">目前館藏空空如也 🫧</p>';
+                    if(data.length === 0){
+                        html = currentBookMode === 'fav' 
+                            ? '<p style="color:gray; text-align:center; width:100%;">目前沒有收藏任何書籍喔 ❤️</p>'
+                            : '<p style="color:gray; text-align:center; width:100%;">目前館藏空空如也 🫧</p>';
                     } else {
                         data.forEach(book => {
-                            // 💡【核心修正】增加防呆與除錯
-                            // 1. 強制把 status 轉字串，並清掉前後空白 (.trim())
                             let statusStr = (book.status ? String(book.status).trim() : "未知");
                             
-                            console.log(`Debug: 書名="${book.title}", 狀態="${statusStr}", 長度=${statusStr.length}`);
-
-                            // 2. 判斷邏輯：檢查關鍵字
-                            // 只要包含「在庫」或「在館」或「可借」，通通給他過！
+                            // ✅ 保留你剛剛測試最完美的「在庫」防呆大軍邏輯！
                             let isAvailable = statusStr.includes("在庫") || statusStr.includes("在館") || statusStr.includes("可借");
-                            
                             let statusColor = isAvailable ? "#4CAF50" : "#e53935";
+                            
                             let actionButton = isAvailable
                                 ? `<button class="btn-action" style="width:100%; margin-top:10px;" onclick="borrowBook('${book.book_id}')">📤 立即借閱</button>`
                                 : `<button class="btn-action" style="width:100%; margin-top:10px; background-color:#ff9800;" onclick="reserveBook('${book.book_id}')">📌 預約排隊</button>`;
-                            
+
                             html += `
                                 <div style="border: 1px solid #b3e5fc; padding: 15px; border-radius: 10px; text-align: center; background-color: #fafafa; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.05); display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
-                                        <h4 style="color: #0277bd; margin: 0 0 10px 0; font-size: 18px;">📖 ${book.title || '未知書名'}</h4>
+                                        <h4 style="color: #0277bd; margin: 0 0 10px 0; font-size: 18px; cursor: pointer; text-decoration: underline;" 
+                                            onclick="showBookHistoryDirectly('${book.book_id}', '${book.title.replace(/'/g, "\\'")}')">
+                                            📖 ${book.title || '未知書名'}
+                                        </h4>
                                         <p style="font-size: 13px; color: gray; margin: 5px 0;">作者：${book.author || '未知作者'}</p>
+                                        <p style="font-size: 13px; color: #00838f; margin: 0 0 10px 0;">分類：${book.subject || '未分類'}</p>
                                         <span style="background-color: ${statusColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
                                             ${statusStr}
                                         </span>
@@ -187,9 +201,25 @@
                     document.getElementById('bookGrid').innerHTML = html;
                 })
                 .catch(err => {
-                    console.error("連線錯誤:", err);
-                    document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">無法連線到伺服器。</p>`;
+                    console.error(err);
+                    document.getElementById('bookGrid').innerHTML = `<p style="color:red; text-align:center; width:100%;">無法連線到伺服器獲取書籍。</p>`;
                 });
+        }
+
+        // 🌟 按鈕點擊切換變色機制 (不影響其他功能)
+        function changeBookMode(mode) {
+            currentBookMode = mode;
+            const btnAll = document.getElementById('btnShowAll');
+            const btnFav = document.getElementById('btnShowFav');
+
+            if(mode === 'all') {
+                btnAll.style.backgroundColor = '#0288d1'; btnAll.style.color = 'white'; btnAll.style.border = 'none';
+                btnFav.style.backgroundColor = 'white'; btnFav.style.color = '#0288d1'; btnFav.style.border = '2px solid #b3e5fc';
+            } else {
+                btnFav.style.backgroundColor = '#0288d1'; btnFav.style.color = 'white'; btnFav.style.border = 'none';
+                btnAll.style.backgroundColor = 'white'; btnAll.style.color = '#0288d1'; btnAll.style.border = '2px solid #b3e5fc';
+            }
+            loadBooks(); // 重新向後端要資料，更新 bookGrid
         }
         // 🌟 2. 處理借書
         function borrowBook(bookId) {
@@ -243,7 +273,65 @@
                     document.getElementById('borrowRecordTableBody').innerHTML = html;
                 }).catch(err => console.error(err));
         }
+        // 🌟 點擊書名直接觸發的歷史紀錄查詢器 (✅ 不需額外 UI 元件，不影響原本功能)
+        function showBookHistoryDirectly(bookId, bookTitle) {
+            console.log(`正在查詢書籍歷史, ID: ${bookId}, 書名: ${bookTitle}`);
+            
+            // 1. 發送請求給我們剛剛開通的 Java 歷史紀錄櫃台
+            fetch(`${BASE_URL}/bookHistory?bookId=${bookId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        alert(`📜 《${bookTitle}》的歷史紀錄\n\n本館藏書目前尚無任何人借閱過喔！🫧`);
+                        return;
+                    }
 
+                    // 2. 組合親切的歷史清單文字
+                    let report = `📜 《${bookTitle}》的歷史借閱軌跡：\n--------------------------------------\n`;
+                    
+                    data.forEach((row, index) => {
+                        let borrowerName = row[0] || "神祕讀者";
+                        // 裁切時間字串到分鐘，看起來比較乾淨
+                        let borrowDate = row[1] ? row[1].substring(0, 16) : "-";
+                        let returnDate = row[2] ? row[2].substring(0, 16) : "❌ 借閱中 (尚未歸還)";
+                        
+                        report += `${index + 1}. 讀者：${borrowerName}\n   📅 借出：${borrowDate}\n   ↩️ 歸還：${returnDate}\n\n`;
+                    });
+
+                    // 3. 一鍵彈出大包裹
+                    alert(report);
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("❌ 無法讀取該書歷史紀錄，請確認 Java 伺服器是否重啟，且 Context 註冊正確！");
+                });
+        }
+        // 4. 點擊按鈕：看書評 (完美對接 ReviewDAO)
+        function fetchReviews() {
+            closeActionMenu();
+            console.log("正在查詢書評...");
+            fetch(`${BASE_URL}/bookReviews?bookId=${actionBookId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        alert(`💬 《${actionBookTitle}》的書評\n\n目前還沒有人留下評論喔，你要當第一個嗎？🐠`);
+                        return;
+                    }
+                    
+                    let report = `💬 《${actionBookTitle}》的讀者書評：\n--------------------------------------\n`;
+                    data.forEach((row) => {
+                        // 根據你的 ReviewDAO 回傳：[姓名, 星星字串, 評論, 時間]
+                        let name = row[0] || "匿名";
+                        let stars = row[1] || ""; 
+                        let comment = row[2] || "沒有留下文字...";
+                        let date = row[3] || "";
+                        
+                        report += `🙋 ${name} [${stars}]\n   🕒 留言時間：${date}\n   💬 ${comment}\n\n`;
+                    });
+                    
+                    alert(report);
+                }).catch(err => alert("讀取書評連線失敗，請確認伺服器已啟動！"));
+        }
         function loadOverdueStatus(stdNo) {
             document.getElementById('overdue').innerHTML = '<h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">⏳ 借閱到期與逾期狀態查詢</h3><p>載入中...</p>';
         }
@@ -256,6 +344,69 @@
             alert("您已成功登出！");
             window.location.href = 'login.html';
         }
+        // ==========================================
+        // 🔮 彈跳選單與書評邏輯
+        // ==========================================
+        let actionBookId = null;
+        let actionBookTitle = "";
+
+        // 1. 打開選擇視窗
+        function openActionMenu(bookId, bookTitle) {
+            actionBookId = bookId;
+            actionBookTitle = bookTitle;
+            document.getElementById('menuBookTitle').innerText = "📖 " + bookTitle;
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('bookActionMenu').style.display = 'block';
+        }
+
+        // 2. 關閉選擇視窗
+        function closeActionMenu() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('bookActionMenu').style.display = 'none';
+        }
+
+        // 3. 點擊按鈕：看歷史 (呼叫原本寫好的功能)
+        function fetchHistory() {
+            closeActionMenu(); 
+            showBookHistoryDirectly(actionBookId, actionBookTitle); 
+        }
+
+        // 4. 點擊按鈕：看書評 (完美對接你隊友寫的 ReviewDAO)
+        function fetchReviews() {
+            closeActionMenu();
+            console.log("正在查詢書評...");
+            fetch(`${BASE_URL}/bookReviews?bookId=${actionBookId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        alert(`💬 《${actionBookTitle}》的書評\n\n目前還沒有人留下評論喔，你要當第一個嗎？🐠`);
+                        return;
+                    }
+                    
+                    let report = `💬 《${actionBookTitle}》的讀者書評：\n--------------------------------------\n`;
+                    data.forEach((row) => {
+                        // 根據 ReviewDAO 回傳：[姓名, 星星字串, 評論, 時間]
+                        let name = row[0] || "匿名";
+                        let stars = row[1] || ""; 
+                        let comment = row[2] || "沒有留下文字...";
+                        let date = row[3] || "";
+                        
+                        report += `🙋 ${name} [${stars}]\n   🕒 留言時間：${date}\n   💬 ${comment}\n\n`;
+                    });
+                    
+                    alert(report);
+                }).catch(err => alert("讀取書評連線失敗，請確認伺服器已啟動！"));
+        }
     </script>
+<div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:999;" onclick="closeActionMenu()"></div>
+    <div id="bookActionMenu" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 10px 25px rgba(2,136,209,0.3); z-index:1000; width:300px; text-align:center; border-top: 6px solid #29b6f6;">
+        <h3 id="menuBookTitle" style="color:#0277bd; margin-top:0; font-size:18px;">書名</h3>
+        <p style="color:gray; font-size:13px; margin-bottom:20px;">請選擇您要查看的項目 🫧</p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button onclick="fetchHistory()" style="background-color:#e1f5fe; color:#0288d1; border:2px solid #b3e5fc; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.2s;">📜 查看歷史借閱</button>
+            <button onclick="fetchReviews()" style="background-color:#e1f5fe; color:#0288d1; border:2px solid #b3e5fc; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.2s;">💬 查看書籍評論</button>
+            <button onclick="closeActionMenu()" style="background-color:#e53935; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px;">❌ 關閉視窗</button>
+        </div>
+    </div>
 </body>
 </html>
