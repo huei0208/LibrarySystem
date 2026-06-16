@@ -113,6 +113,25 @@
     </div>
 
     <script>
+        // ==========================================
+        // 🐳 海底圖書館 - 網頁開機啟動紐 (補上這段 🚀)
+        // ==========================================
+        window.onload = function() {
+            // 1. 從 sessionStorage 裡面抓出登入時存下來的學生姓名與學號
+            const currentUserName = sessionStorage.getItem("userName") || "讀者";
+            const currentStudentNo = sessionStorage.getItem("studentNo") || "未知學號";
+
+            // 2. 找到網頁上的歡迎文字標籤，並把名字塞進去
+            // 💡 提示：請確認你原本網頁頂部顯示「歡迎回來...」的標籤 id 是叫 'txtWelcome' 喔！
+            const welcomeTag = document.getElementById('txtWelcome');
+            if (welcomeTag) {
+                welcomeTag.innerText = `👋 歡迎回來，${currentUserName} 同學 (${currentStudentNo})`;
+            }
+
+            // 3. 一進大廳自動同步觸發這兩個大腦，把資料庫畫面填滿！
+            loadBooks();               // 載入上方的全部書籍卡片
+            loadMyBorrowedBooks();     // 載入下方的個人借閱中清單表格
+        };
         const SERVER_PORT = "8080"; 
         const BASE_URL = `http://localhost:${SERVER_PORT}/api`;
         let currentBookMode = "all"; // 💡 預設是看全部書籍，點按鈕會切換成 'fav'
@@ -184,7 +203,7 @@
                                 <div style="border: 1px solid #b3e5fc; padding: 15px; border-radius: 10px; text-align: center; background-color: #fafafa; box-shadow: 0 4px 6px rgba(2, 136, 209, 0.05); display: flex; flex-direction: column; justify-content: space-between;">
                                     <div>
                                         <h4 style="color: #0277bd; margin: 0 0 10px 0; font-size: 18px; cursor: pointer; text-decoration: underline;" 
-                                            onclick="showBookHistoryDirectly('${book.book_id}', '${book.title.replace(/'/g, "\\'")}')">
+                                            onclick="openActionMenu('${book.book_id}', '${book.title.replace(/'/g, "\\'")}')">
                                             📖 ${book.title || '未知書名'}
                                         </h4>
                                         <p style="font-size: 13px; color: gray; margin: 5px 0;">作者：${book.author || '未知作者'}</p>
@@ -236,18 +255,23 @@
                 }).catch(err => alert("連線失敗，請檢查 Java 伺服器！"));
         }
 
-        // 🌟 3. 處理預約
+        // 📌 7. 預約排隊功能 (完美對接版)
         function reserveBook(bookId) {
-            if(!confirm("這本書目前被借走了，要加入預約排隊嗎？")) return;
-            fetch(`${BASE_URL}/reserve?bookId=${bookId}&studentNo=${studentNo}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert("🎉 預約成功！");
-                    } else {
-                        alert("❌ 預約失敗：" + data.message);
-                    }
-                }).catch(err => alert("連線失敗！"));
+            const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
+            
+            if (confirm("確定要排隊預約這本書嗎？\n當書本被歸還時，人魚櫃台會優先將它保留給您喔！🐙")) {
+                // 發送 POST 請求給 Java 的預約櫃台
+                fetch(`${BASE_URL}/reserve?bookId=${bookId}&studentNo=${stdNo}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message); // 跳出預約成功或已經預約過的訊息
+                        loadBooks();         // 重新刷新畫面卡片
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert("預約連線失敗，請確認伺服器已重啟並開通預約櫃台！");
+                    });
+            }
         }
 
         // 🌟 4. 撈取借閱歷史 (防呆裝甲版 🛡️)
@@ -397,6 +421,91 @@
                     alert(report);
                 }).catch(err => alert("讀取書評連線失敗，請確認伺服器已啟動！"));
         }
+        // 5. 點擊按鈕：加入或取消收藏
+        function toggleFavorite() {
+            closeActionMenu(); // 先把選單關掉
+            const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
+            
+            console.log(`正在發送收藏請求：學號=${stdNo}, 書籍ID=${actionBookId}`);
+            
+            // 使用 POST 發送給我們剛開好的 toggleFavorite 櫃台
+            fetch(`${BASE_URL}/toggleFavorite?studentNo=${stdNo}&bookId=${actionBookId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    alert(data.message); // 會跳出「已成功加入收藏 ❤️」或「已為您取消收藏 💔」
+                    
+                    // ✨ 貼心設計：如果你現在剛好在看「我的收藏」分頁，取消收藏後要自動重新載入畫面！
+                    if (currentBookMode === 'fav') {
+                        loadBooks(); 
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("連線失敗，請確認 Java 伺服器是否有開啟收藏櫃台！");
+                });
+        }
+        // ==========================================
+        // ↩️ 核心：個人借閱中與辦理還書邏輯
+        // ==========================================
+
+        // 1. 自動去向 Java 撈取目前自己「借閱中且還沒還」的書，並塞進你原本的 HTML 表格裡
+        function loadMyBorrowedBooks() {
+            const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
+            
+            // 💡 請確認你原本 dashboard.html 裡放個人借閱紀錄的 <tbody> 標籤是否有加上 id="borrowedTableBody"
+            // 如果沒有，請去你的 HTML 表格 <tbody> 加上 id="borrowedTableBody"
+            const tableBody = document.getElementById('borrowedTableBody');
+            if(!tableBody) return; // 防呆：如果舊版網頁沒這個元件就先跳過
+
+            fetch(`${BASE_URL}/myBorrowedBooks?studentNo=${stdNo}`)
+                .then(res => res.json())
+                .then(data => {
+                    let html = '';
+                    if (!Array.isArray(data) || data.length === 0) {
+                        html = `<tr><td colspan="4" style="text-align:center; color:gray;">您目前手邊沒有借閱中的書籍喔 🐳</td></tr>`;
+                    } else {
+                        data.forEach((row, index) => {
+                            // 裁切乾淨的時間字串
+                            let bDate = row.borrow_date ? row.borrow_date.substring(0, 10) : "-";
+                            let dDate = row.due_date ? row.due_date.substring(0, 10) : "-";
+                            
+                            html += `
+                                <tr>
+                                    <td>📖 ${row.title}</td>
+                                    <td>${bDate}</td>
+                                    <td style="color:#e53935; font-weight:bold;">${dDate}</td>
+                                    <td>
+                                        <button onclick="executeReturnBook('${row.record_id}', '${row.book_id}', '${row.title.replace(/'/g, "\\'")}')" 
+                                                style="background-color:#009688; color:white; border:none; padding:4px 10px; border-radius:12px; font-weight:bold; cursor:pointer;">
+                                            ↩️ 辦理還書
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    tableBody.innerHTML = html;
+                })
+                .catch(err => console.error("加載個人借閱中清單失敗:", err));
+        }
+
+        // 2. 點擊「辦理還書」按鈕觸發的 API 請求
+        function executeReturnBook(recordId, bookId, bookTitle) {
+            if (confirm(`確定要把《${bookTitle}》歸還給深海管理員嗎？🐙`)) {
+                const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
+                
+                fetch(`${BASE_URL}/returnBook?recordId=${recordId}&bookId=${bookId}&studentNo=${stdNo}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message); // 跳出還書成功，或預約遞補成功的神奇通知！
+                        
+                        // 🌟 神裝級聯動重刷機制：還書成功後，自動重刷所有清單
+                        loadBooks();           // 讓大廳卡片立刻從「借出」變回綠色「在庫」！
+                        loadMyBorrowedBooks(); // 讓借閱中表格裡面的這一列自動消失！
+                    })
+                    .catch(err => alert("還書手續連線失敗！"));
+            }
+        }
     </script>
 <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); z-index:999;" onclick="closeActionMenu()"></div>
     <div id="bookActionMenu" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; border-radius:15px; box-shadow:0 10px 25px rgba(2,136,209,0.3); z-index:1000; width:300px; text-align:center; border-top: 6px solid #29b6f6;">
@@ -405,6 +514,7 @@
         <div style="display:flex; flex-direction:column; gap:10px;">
             <button onclick="fetchHistory()" style="background-color:#e1f5fe; color:#0288d1; border:2px solid #b3e5fc; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.2s;">📜 查看歷史借閱</button>
             <button onclick="fetchReviews()" style="background-color:#e1f5fe; color:#0288d1; border:2px solid #b3e5fc; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.2s;">💬 查看書籍評論</button>
+            <button onclick="toggleFavorite()" style="background-color:#ffebee; color:#d32f2f; border:2px solid #ffcdd2; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; transition:0.2s;">❤️ 加入 / 取消收藏</button>
             <button onclick="closeActionMenu()" style="background-color:#e53935; color:white; border:none; padding:10px; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:5px;">❌ 關閉視窗</button>
         </div>
     </div>
