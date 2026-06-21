@@ -68,7 +68,9 @@
 
             <div id="return" class="page-section">
                 <h3 style="color: #0277bd; border-bottom: 2px solid #e1f5fe; padding-bottom: 10px;">📥 辦理還書</h3>
-                <p>請在此選擇您要歸還的書籍。(功能即將開放)</p>
+                
+                <div id="borrowedBookGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; margin-top: 15px;">
+                    </div>
             </div>
 
             <div id="records" class="page-section">
@@ -162,6 +164,9 @@
             else if (tabId === 'records') loadMyBorrowRecords(studentNo);
             else if (tabId === 'reservations') loadMyReservations(studentNo);
             else if (tabId === 'overdue') loadOverdueStatus(studentNo);
+            else if (tabId === 'return') {
+            loadMyBorrowedBooksAsCards();
+            }
         }
 
         // 🌟 升級版：支援「全部」與「收藏」一鍵切換
@@ -445,51 +450,54 @@
                 });
         }
         // ==========================================
-        // ↩️ 核心：個人借閱中與辦理還書邏輯
+        // ↩️ 專屬：還書區塊的智慧卡片生成與手續辦理
         // ==========================================
 
-        // 1. 自動去向 Java 撈取目前自己「借閱中且還沒還」的書，並塞進你原本的 HTML 表格裡
-        function loadMyBorrowedBooks() {
+        // 1. 去跟 Java 開好的櫃台抓資料，並塞進 id="borrowedBookGrid" 裡面
+        function loadMyBorrowedBooksAsCards() {
             const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
-            
-            // 💡 請確認你原本 dashboard.html 裡放個人借閱紀錄的 <tbody> 標籤是否有加上 id="borrowedTableBody"
-            // 如果沒有，請去你的 HTML 表格 <tbody> 加上 id="borrowedTableBody"
-            const tableBody = document.getElementById('borrowedTableBody');
-            if(!tableBody) return; // 防呆：如果舊版網頁沒這個元件就先跳過
+            const gridContainer = document.getElementById('borrowedBookGrid');
+            if (!gridContainer) return; // 防呆機制
 
             fetch(`${BASE_URL}/myBorrowedBooks?studentNo=${stdNo}`)
                 .then(res => res.json())
                 .then(data => {
                     let html = '';
                     if (!Array.isArray(data) || data.length === 0) {
-                        html = `<tr><td colspan="4" style="text-align:center; color:gray;">您目前手邊沒有借閱中的書籍喔 🐳</td></tr>`;
+                        html = '<p style="color:gray; text-align:center; width:100%; grid-column: 1/-1; margin-top: 10px;">您手邊目前沒有借閱中的書籍喔 🐳</p>';
                     } else {
-                        data.forEach((row, index) => {
-                            // 裁切乾淨的時間字串
+                        data.forEach(row => {
                             let bDate = row.borrow_date ? row.borrow_date.substring(0, 10) : "-";
                             let dDate = row.due_date ? row.due_date.substring(0, 10) : "-";
                             
+                            // 生成充滿海洋風、帶有還書紐的翡翠綠卡片
                             html += `
-                                <tr>
-                                    <td>📖 ${row.title}</td>
-                                    <td>${bDate}</td>
-                                    <td style="color:#e53935; font-weight:bold;">${dDate}</td>
-                                    <td>
-                                        <button onclick="executeReturnBook('${row.record_id}', '${row.book_id}', '${row.title.replace(/'/g, "\\'")}')" 
-                                                style="background-color:#009688; color:white; border:none; padding:4px 10px; border-radius:12px; font-weight:bold; cursor:pointer;">
-                                            ↩️ 辦理還書
-                                        </button>
-                                    </td>
-                                </tr>
+                                <div style="border: 2px solid #b2dfdb; padding: 15px; border-radius: 10px; text-align: center; background-color: #e0f2f1; box-shadow: 0 4px 8px rgba(0, 150, 136, 0.1); display: flex; flex-direction: column; justify-content: space-between;">
+                                    <div>
+                                        <h4 style="color: #00796b; margin: 0 0 10px 0; font-size: 17px; cursor: pointer; text-decoration: underline;" 
+                                            onclick="openActionMenu('${row.book_id}', '${row.title.replace(/'/g, "\\'")}')">
+                                            🎒 ${row.title}
+                                        </h4>
+                                        <p style="font-size: 13px; color: #546e7a; margin: 5px 0;">📅 借出日：${bDate}</p>
+                                        <p style="font-size: 14px; color: #d32f2f; font-weight: bold; margin: 0 0 10px 0;">⏰ 到期日：${dDate}</p>
+                                    </div>
+                                    <button style="width:100%; margin-top:10px; background-color:#009688; color: white; border: none; padding: 8px; border-radius: 10px; font-weight: bold; cursor: pointer; box-shadow: 0 3px 6px rgba(0,150,136,0.2);" 
+                                            onclick="executeReturnBook('${row.record_id}', '${row.book_id}', '${row.title.replace(/'/g, "\\'")}')">
+                                        ↩️ 辦理還書
+                                    </button>
+                                </div>
                             `;
                         });
                     }
-                    tableBody.innerHTML = html;
+                    gridContainer.innerHTML = html;
                 })
-                .catch(err => console.error("加載個人借閱中清單失敗:", err));
+                .catch(err => {
+                    console.error("加載個人借閱中清單失敗:", err);
+                    gridContainer.innerHTML = '<p style="color:red; text-align:center; width:100%; grid-column: 1/-1;">無法連線至 Java 伺服器，請確認後端已重啟！</p>';
+                });
         }
 
-        // 2. 點擊「辦理還書」按鈕觸發的 API 請求
+        // 2. 當讀者按下卡片上的「辦理還書」按鈕時觸發的交易
         function executeReturnBook(recordId, bookId, bookTitle) {
             if (confirm(`確定要把《${bookTitle}》歸還給深海管理員嗎？🐙`)) {
                 const stdNo = sessionStorage.getItem("studentNo") || "未知學號";
@@ -497,11 +505,13 @@
                 fetch(`${BASE_URL}/returnBook?recordId=${recordId}&bookId=${bookId}&studentNo=${stdNo}`)
                     .then(res => res.json())
                     .then(data => {
-                        alert(data.message); // 跳出還書成功，或預約遞補成功的神奇通知！
+                        alert(data.message); // 會跳出還書成功，或自動遞補排隊系統的神奇通知！
                         
-                        // 🌟 神裝級聯動重刷機制：還書成功後，自動重刷所有清單
-                        loadBooks();           // 讓大廳卡片立刻從「借出」變回綠色「在庫」！
-                        loadMyBorrowedBooks(); // 讓借閱中表格裡面的這一列自動消失！
+                        // 🌟 還書成功後，在眼前把卡片重新刷新，該卡片就會瞬間在眼前消失，體驗極度流暢！
+                        loadMyBorrowedBooksAsCards();
+                        
+                        // 順便把大廳全館書籍狀態更新 (如果大廳剛好也是開著的)
+                        if (typeof loadBooks === 'function') loadBooks(); 
                     })
                     .catch(err => alert("還書手續連線失敗！"));
             }
