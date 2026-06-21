@@ -12,7 +12,7 @@ public class DBUtil {
     private static final String USER = "root"; 
     
     // 3. MySQL 的密碼（改成你安裝 .pkg 時設定的那組密碼）
-    private static final String PASSWORD = "15791579"; 
+    private static final String PASSWORD = "32148848"; 
 
     public static Connection getConnection() throws SQLException {
     	

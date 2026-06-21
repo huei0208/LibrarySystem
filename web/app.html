@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>海底圖書館｜Web 系統</title>
+<style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,'Microsoft JhengHei',sans-serif;background:#f4f8fb;color:#263238} 
+    header{background:linear-gradient(135deg,#0277bd,#00acc1);color:white;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 3px 12px rgba(0,0,0,.12)}
+    header h1{font-size:22px;margin:0}.user{font-size:14px;opacity:.95}.layout{display:flex;min-height:calc(100vh - 68px)}
+    aside{width:245px;background:#08384f;color:white;padding:16px 10px;overflow:auto} .group-title{font-size:12px;color:#9bd6ec;margin:18px 12px 8px;letter-spacing:1px}
+    .navbtn{width:100%;text-align:left;background:transparent;color:white;border:0;padding:11px 13px;border-radius:10px;margin:2px 0;cursor:pointer;font-size:15px}
+    .navbtn:hover,.navbtn.active{background:#0b5b7e}.adminOnly{display:none} main{flex:1;padding:22px;overflow:auto}.section{display:none}.section.active{display:block}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}.card{background:white;border-radius:16px;padding:18px;box-shadow:0 5px 18px rgba(33,73,92,.08)}
+    .num{font-size:30px;font-weight:bold;color:#0277bd}.label{color:#607d8b;font-size:14px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 16px}
+    input,select,textarea{border:1px solid #c9dce5;border-radius:10px;padding:10px 12px;font-size:14px;background:white}input{min-width:220px}textarea{width:100%;min-height:80px}
+    button{border:0;border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:bold}.primary{background:#0288d1;color:white}.success{background:#2e7d32;color:white}.danger{background:#c62828;color:white}.warn{background:#f9a825;color:#222}.light{background:#edf5f8;color:#1e6077}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:16px;overflow:hidden;box-shadow:0 5px 18px rgba(33,73,92,.08)}th,td{padding:11px;border-bottom:1px solid #eef3f6;text-align:left;vertical-align:top}th{background:#e9f5f9;color:#24576b;white-space:nowrap}tr:hover td{background:#fbfdfe}
+    .badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px;font-weight:bold}.b-ok{background:#e8f5e9;color:#2e7d32}.b-bad{background:#ffebee;color:#c62828}.b-warn{background:#fff8e1;color:#9a6b00}.b-info{background:#e3f2fd;color:#0277bd}
+    .bar{height:22px;background:#b3e5fc;border-radius:999px;margin:4px 0;position:relative;overflow:hidden}.bar span{display:block;height:100%;background:#0288d1;border-radius:999px}.small{font-size:13px;color:#607d8b}.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}.modalBox{background:white;max-width:720px;width:100%;border-radius:16px;padding:18px;max-height:85vh;overflow:auto}
+    .chartGrid{display:grid;grid-template-columns:minmax(360px,2fr) minmax(260px,1fr);gap:16px}.chartBox h3{margin:0 0 12px;color:#24576b}.barRow{display:grid;grid-template-columns:160px 1fr 60px;gap:10px;align-items:center;margin:10px 0}.barTrack{height:28px;background:#e3f2fd;border-radius:999px;overflow:hidden}.barFill{height:100%;border-radius:999px;background:linear-gradient(90deg,#0288d1,#00acc1)}.pieChart{width:230px;height:230px;border-radius:50%;margin:8px auto;box-shadow:inset 0 0 0 1px #d7e7ef}.legend{display:grid;gap:8px;margin-top:12px}.legendItem{display:flex;align-items:center;gap:8px;font-size:14px}.dot{width:14px;height:14px;border-radius:50%;display:inline-block}.statusBox{display:grid;gap:5px}.statusLine{display:flex;gap:6px;flex-wrap:wrap}.miniBadge{display:inline-block;padding:3px 7px;border-radius:999px;font-size:12px;background:#eef7fb;color:#24576b}.miniBadge.warn{background:#fff8e1;color:#9a6b00}.miniBadge.ok{background:#e8f5e9;color:#2e7d32}.miniBadge.bad{background:#ffebee;color:#c62828}.notice{background:#fff8e1;border-left:5px solid #f9a825;padding:12px 14px;border-radius:10px;margin:10px 0;color:#5d4300}.badgeGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}.achievement{border:1px solid #d7e7ef;border-radius:14px;padding:14px;background:white}.achievement.earned{border-color:#2e7d32;background:#f1fbf2}.achievement.locked{opacity:.55}.riskGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:1000px){.riskGrid{grid-template-columns:1fr}}@media(max-width:900px){.chartGrid{grid-template-columns:1fr}.barRow{grid-template-columns:120px 1fr 48px}}
+</style>
+</head>
+<body>
+<header>
+    <h1>🌊 海底圖書館 Web 系統</h1>
+    <div class="user" id="userInfo"></div>
+</header>
+<div class="layout">
+<aside>
+    <div class="group-title">學生功能</div>
+    <button class="navbtn active" onclick="show('studentHome',this)">首頁總覽</button>
+    <button class="navbtn" onclick="show('bookSearch',this)">書籍查詢 / 借閱</button>
+    <button class="navbtn" onclick="show('recommendations',this)">智慧推薦</button>
+    <button class="navbtn" onclick="show('currentBorrow',this)">目前借閱 / 還書 / 續借</button>
+    <button class="navbtn" onclick="show('history',this)">借閱歷史</button>
+    <button class="navbtn" onclick="show('myReservations',this)">我的預約</button>
+    <button class="navbtn" onclick="show('favorites',this)">我的收藏</button>
+    <button class="navbtn" onclick="show('notifications',this)">通知中心</button>
+    <button class="navbtn" onclick="show('badges',this)">閱讀成就</button>
+    <button class="navbtn" onclick="show('vipApply',this)">VIP 申請</button>
+
+    <div class="adminOnly">
+        <div class="group-title">管理者功能</div>
+        <button class="navbtn" onclick="show('adminDashboard',this)">管理者總覽</button>
+        <button class="navbtn" onclick="show('adminBooks',this)">書籍管理</button>
+        <button class="navbtn" onclick="show('adminUsers',this)">使用者管理</button>
+        <button class="navbtn" onclick="show('adminRecords',this)">全校借還紀錄</button>
+        <button class="navbtn" onclick="show('adminOverdue',this)">逾期 / 罰款警示</button>
+        <button class="navbtn" onclick="show('adminReservations',this)">預約管理</button>
+        <button class="navbtn" onclick="show('adminReviews',this)">書評管理</button>
+        <button class="navbtn" onclick="show('adminStats',this)">主題借閱統計</button>
+        <button class="navbtn" onclick="show('adminInsights',this)">決策儀表板</button>
+        <button class="navbtn" onclick="show('adminVip',this)">VIP 申請管理</button>
+    </div>
+    <div class="group-title"></div>
+    <button class="navbtn" onclick="logout()">登出</button>
+</aside>
+<main>
+<section id="studentHome" class="section active">
+    <h2>學生首頁</h2><div class="cards" id="studentCards"></div>
+    <div class="card"><b>功能說明：</b>可以查書、借書、還書、看逾期罰款、預約、收藏、寫書評、申請 VIP。</div>
+</section>
+<section id="bookSearch" class="section">
+    <h2>書籍查詢 / 借閱</h2>
+    <div class="row"><input id="bookKeyword" placeholder="搜尋書名、作者、主題、出版社"><button class="primary" onclick="loadBooks()">搜尋</button><button class="light" onclick="document.getElementById('bookKeyword').value='';loadBooks()">全部</button></div>
+    <div id="booksTable"></div>
+</section>
+<section id="recommendations" class="section">
+    <h2>智慧推薦</h2>
+    <div class="card small">系統會根據你的借閱紀錄與收藏主題推薦可借書籍；如果沒有紀錄，會改顯示熱門書籍。</div>
+    <div id="recommendationsTable"></div>
+</section>
+<section id="currentBorrow" class="section"><h2>目前借閱 / 還書 / 續借</h2><div class="card small">續借規則：每筆借閱最多續借 1 次；若已逾期或該書有人預約，不能續借。</div><div id="currentTable"></div></section>
+<section id="history" class="section"><h2>借閱歷史</h2><div id="historyTable"></div></section>
+<section id="myReservations" class="section"><h2>我的預約</h2><div id="myReservationsTable"></div></section>
+<section id="favorites" class="section"><h2>我的收藏</h2><div id="favoritesTable"></div></section>
+<section id="notifications" class="section"><h2>通知中心</h2><div class="row"><button class="light" onclick="readAllNoti()">全部設為已讀</button></div><div id="notificationsTable"></div></section>
+<section id="badges" class="section"><h2>閱讀成就</h2><div id="badgesBox"></div></section>
+<section id="vipApply" class="section"><h2>VIP 申請</h2><div class="card"><p>VIP 使用者借閱上限與借閱天數會提升，送出後由管理者審核。</p><button class="primary" onclick="applyVip()">送出 VIP 申請</button></div></section>
+
+<section id="adminDashboard" class="section"><h2>管理者總覽</h2><div class="cards" id="adminCards"></div></section>
+<section id="adminBooks" class="section">
+    <h2>書籍管理</h2>
+    <div class="card">
+        <h3>新增書籍</h3>
+        <div class="row"><input id="addTitle" placeholder="書名"><input id="addAuthors" placeholder="作者"><input id="addSubjects" placeholder="主題"><input id="addPublisher" placeholder="出版社"><input id="addYear" placeholder="出版年"><button class="success" onclick="adminAddBook()">新增</button></div>
+    </div>
+    <div class="row"><input id="adminBookKeyword" placeholder="搜尋書籍"><button class="primary" onclick="loadAdminBooks()">搜尋</button></div><div id="adminBooksTable"></div>
+</section>
+<section id="adminUsers" class="section"><h2>使用者管理</h2><div class="row"><input id="adminUserKeyword" placeholder="搜尋學號 / 姓名"><button class="primary" onclick="loadAdminUsers()">搜尋</button></div><div id="adminUsersTable"></div></section>
+<section id="adminRecords" class="section"><h2>全校借還紀錄</h2><div class="row"><input id="adminRecordKeyword" placeholder="搜尋學號 / 姓名 / 書名"><button class="primary" onclick="loadAdminRecords()">搜尋</button><button class="light" onclick="exportAdminRecords()">匯出 CSV</button></div><div id="adminRecordsTable"></div></section>
+<section id="adminOverdue" class="section"><h2>逾期 / 罰款警示</h2><div class="row"><button class="warn" onclick="notifyAllOverdue()">一鍵寄送逾期通知</button><button class="light" onclick="loadAdminOverdue()">重新整理</button></div><div id="adminOverdueTable"></div></section>
+<section id="adminReservations" class="section"><h2>預約管理</h2><div id="adminReservationsTable"></div></section>
+<section id="adminReviews" class="section"><h2>書評管理</h2><div id="adminReviewsTable"></div></section>
+<section id="adminStats" class="section"><h2>主題借閱統計</h2><div id="adminStatsBox"></div></section>
+<section id="adminInsights" class="section"><h2>決策儀表板</h2><div class="riskGrid"><div class="card"><h3>逾期風險學生排行</h3><div id="riskUsersTable"></div></div><div class="card"><h3>館藏決策建議</h3><div id="inventoryAlertsTable"></div></div></div></section>
+<section id="adminVip" class="section"><h2>VIP 申請管理</h2><div id="adminVipTable"></div></section>
+</main>
+</div>
+<div class="modal" id="modal"><div class="modalBox"><div class="row" style="justify-content:space-between"><h3 id="modalTitle">內容</h3><button class="danger" onclick="closeModal()">關閉</button></div><div id="modalBody"></div></div></div>
+<script>
+const API='http://localhost:8080/api';
+const user=JSON.parse(sessionStorage.getItem('libraryUser')||'null');
+if(!user){ location.href='login.html'; }
+const isAdmin=user && user.role==='ADMIN';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+const badge=s=>{s=String(s||''); let c=s==='AVAILABLE'||s==='ACTIVE'||s==='VIP'||s==='APPROVED'?'b-ok':s==='BORROWED'||s==='WAITING'||s==='PENDING'?'b-warn':s==='READY'?'b-info':'b-bad'; return `<span class="badge ${c}">${esc(s)}</span>`};
+async function api(path,opt={}){const res=await fetch(API+path,opt);return await res.json();}
+function post(path,obj={}){return api(path,{method:'POST',body:new URLSearchParams(obj)});} 
+function logout(){sessionStorage.removeItem('libraryUser');location.href='login.html';}
+function show(id,btn){document.querySelectorAll('.section').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');document.querySelectorAll('.navbtn').forEach(x=>x.classList.remove('active')); if(btn)btn.classList.add('active'); loaders[id]?.();}
+function table(headers,rows){return `<table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.join(''):`<tr><td colspan="${headers.length}" class="small">目前沒有資料</td></tr>`}</tbody></table>`;}
+function modal(title,html){$('modalTitle').textContent=title;$('modalBody').innerHTML=html;$('modal').style.display='flex';}
+function closeModal(){$('modal').style.display='none';}
+
+$('userInfo').textContent=`${user.name||'管理者'}｜${user.role_level||user.role}｜借閱上限 ${user.borrow_limit||'-'} 本`;
+if(isAdmin) document.querySelectorAll('.adminOnly').forEach(x=>x.style.display='block');
+
+async function loadStudentHome(){
+    const cur = isAdmin ? [] : await api(`/my/current?user_id=${user.user_id}`);
+    const res = isAdmin ? [] : await api(`/my/reservations?user_id=${user.user_id}`);
+    const noti = isAdmin ? [] : await api(`/notifications?user_id=${user.user_id}`);
+    const overdueCount = cur.filter(x=>x.overdue_days>0).length;
+    $('studentCards').innerHTML = [
+        ['目前借閱', cur.length], ['逾期筆數', overdueCount], ['預約中', res.filter(x=>x.status==='WAITING'||x.status==='READY').length], ['未讀通知', noti.filter(x=>!x.is_read).length]
+    ].map(x=>`<div class="card"><div class="num">${x[1]}</div><div class="label">${x[0]}</div></div>`).join('') +
+    (overdueCount>0 ? `<div class="notice"><b>借閱限制提醒：</b>你目前有 ${overdueCount} 本逾期未還書籍，系統會暫停新增借書，請先還書。</div>` : '');
+}
+function statusInfo(b){
+    const reserveCount=Number(b.reservation_count||0);
+    const reserved=b.is_reserved===true || b.is_reserved==='true';
+    const fav=b.is_favorite===true || b.is_favorite==='true';
+    const reserveText = reserved ? '預約：已預約' : (reserveCount>0 ? `預約：${reserveCount} 人等待` : '預約：尚無');
+    const reserveClass = reserved ? 'ok' : (reserveCount>0 ? 'warn' : '');
+    const favText = fav ? '收藏：已收藏' : '收藏：未收藏';
+    return `<div class="statusBox"><div class="statusLine">${badge(b.status)}</div><div class="statusLine"><span class="miniBadge ${reserveClass}">${reserveText}</span><span class="miniBadge ${fav?'ok':''}">${favText}</span></div></div>`;
+}
+function actionButtons(b){
+    const title = esc(b.title).replaceAll("'",'');
+    const fav=b.is_favorite===true || b.is_favorite==='true';
+    const reserved=b.is_reserved===true || b.is_reserved==='true';
+    const favBtn = fav ? `<button class="danger" onclick="removeFavoriteFromSearch(${b.book_id})">取消收藏</button>` : `<button class="light" onclick="favoriteBook(${b.book_id})">收藏</button>`;
+    const reserveBtn = reserved ? `<button class="light" onclick="show('myReservations')">查看預約</button>` : `<button class="warn" onclick="reserveBook(${b.book_id})">預約</button>`;
+    return `<button class="success" onclick="borrowBook(${b.book_id})">借閱</button> ${reserveBtn} ${favBtn} <button class="light" onclick="showReviews(${b.book_id},'${title}')">書評</button>`;
+}
+async function loadBooks(){
+    const k=encodeURIComponent($('bookKeyword').value||'');
+    const data=await api(`/books?keyword=${k}&user_id=${user.user_id}`);
+    $('booksTable').innerHTML=table(['ID','書名','作者','主題','狀態 / 預約 / 收藏','操作'],data.map(b=>`<tr><td>${b.book_id}</td><td>${esc(b.title)}</td><td>${esc(b.authors)}</td><td>${esc(b.subjects)}</td><td>${statusInfo(b)}</td><td>${actionButtons(b)}</td></tr>`));
+}
+
+async function loadRecommendations(){
+    const data=await api(`/recommendations?user_id=${user.user_id}`);
+    $('recommendationsTable').innerHTML=table(['ID','推薦原因','書名','作者','主題','狀態 / 預約 / 收藏','操作'],data.map(b=>`<tr><td>${b.book_id}</td><td>${esc(b.reason||'推薦')}</td><td>${esc(b.title)}</td><td>${esc(b.authors)}</td><td>${esc(b.subjects)}</td><td>${statusInfo(b)}</td><td>${actionButtons(b)}</td></tr>`));
+}
+async function borrowBook(id){const d=await post('/borrow',{user_id:user.user_id,book_id:id});alert(d.message);loadBooks();loadRecommendations();loadCurrent();loadStudentHome();loadNotifications();}
+async function reserveBook(id){const d=await post('/reserve',{user_id:user.user_id,book_id:id});alert(d.message);loadBooks();loadRecommendations();loadMyReservations();loadNotifications();loadStudentHome();}
+async function favoriteBook(id){const d=await post('/favorite/add',{user_id:user.user_id,book_id:id});alert(d.message);loadBooks();loadRecommendations();loadFavorites();}
+async function removeFavoriteFromSearch(id){const d=await post('/favorite/delete',{user_id:user.user_id,book_id:id});alert(d.message);loadBooks();loadRecommendations();loadFavorites();}
+async function showReviews(id,title){const data=await api(`/reviews?book_id=${id}`);modal('《'+title+'》書評', table(['評分','姓名','內容','時間'], data.map(r=>`<tr><td>${r.rating}</td><td>${esc(r.name)}</td><td>${esc(r.comment)}</td><td>${esc(r.created_at)}</td></tr>`)) + `<div class="card"><h3>新增書評</h3><select id="rvRating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><textarea id="rvComment" placeholder="輸入書評"></textarea><button class="primary" onclick="addReview(${id})">送出</button></div>`);}
+async function addReview(id){const d=await post('/review/add',{user_id:user.user_id,book_id:id,rating:$('rvRating').value,comment:$('rvComment').value});alert(d.message);closeModal();}
+async function loadCurrent(){const data=await api(`/my/current?user_id=${user.user_id}`);$('currentTable').innerHTML=table(['紀錄ID','書名','借出','應還','續借','逾期','罰款','操作'],data.map(r=>`<tr><td>${r.record_id}</td><td>${esc(r.title)}</td><td>${esc(r.borrow_date)}</td><td>${esc(r.due_date)}</td><td>${r.renewed_count||0}/1</td><td>${r.overdue_days} 天</td><td>NT$ ${r.fine}</td><td><button class="warn" onclick="renewBook(${r.record_id})">續借</button> <button class="success" onclick="returnBook(${r.record_id})">還書</button></td></tr>`));}
+async function returnBook(id){let rating=prompt('評分 1-5，不填則不寫書評','5')||'';let comment=prompt('書評內容，不填可略過','')||'';const d=await post('/return',{user_id:user.user_id,record_id:id,rating,comment});alert(d.message);loadCurrent();loadHistory();loadBooks();loadNotifications();loadStudentHome();}
+async function renewBook(id){const d=await post('/renew',{user_id:user.user_id,record_id:id});alert(d.message);loadCurrent();loadNotifications();loadStudentHome();}
+async function loadHistory(){const data=await api(`/my/history?user_id=${user.user_id}`);$('historyTable').innerHTML=table(['紀錄ID','書名','借出','應還','歸還'],data.map(r=>`<tr><td>${r.record_id}</td><td>${esc(r.title)}</td><td>${esc(r.borrow_date)}</td><td>${esc(r.due_date)}</td><td>${esc(r.return_date||'尚未歸還')}</td></tr>`));}
+async function loadMyReservations(){const data=await api(`/my/reservations?user_id=${user.user_id}`);$('myReservationsTable').innerHTML=table(['ID','書名','時間','狀態','操作'],data.map(r=>`<tr><td>${r.reservation_id}</td><td>${esc(r.title)}</td><td>${esc(r.reserve_date)}</td><td>${badge(r.status)}</td><td><button class="danger" onclick="deleteReservation(${r.reservation_id},loadMyReservations)">取消</button></td></tr>`));}
+async function loadFavorites(){const data=await api(`/my/favorites?user_id=${user.user_id}`);$('favoritesTable').innerHTML=table(['ID','書名','作者','主題','狀態 / 預約 / 收藏','操作'],data.map(b=>`<tr><td>${b.book_id}</td><td>${esc(b.title)}</td><td>${esc(b.authors)}</td><td>${esc(b.subjects)}</td><td>${statusInfo({...b,is_favorite:true})}</td><td><button class="danger" onclick="removeFavorite(${b.book_id})">移除</button></td></tr>`));}
+async function removeFavorite(id){const d=await post('/favorite/delete',{user_id:user.user_id,book_id:id});alert(d.message);loadFavorites();}
+async function loadNotifications(){const data=await api(`/notifications?user_id=${user.user_id}`);$('notificationsTable').innerHTML=table(['ID','訊息','狀態','時間','操作'],data.map(n=>`<tr><td>${n.notification_id}</td><td>${esc(n.message)}</td><td>${n.is_read?'已讀':'未讀'}</td><td>${esc(n.created_at)}</td><td><button class="light" onclick="readNoti(${n.notification_id})">設為已讀</button></td></tr>`));}
+async function readNoti(id){await post('/notification/read',{notification_id:id,user_id:user.user_id});loadNotifications();loadStudentHome();}
+async function readAllNoti(){await post('/notification/read',{notification_id:-1,user_id:user.user_id});loadNotifications();loadStudentHome();}
+async function applyVip(){const d=await post('/vip/request',{user_id:user.user_id});alert(d.message);}
+
+async function loadAdminDashboard(){const d=await api('/admin/dashboard');$('adminCards').innerHTML=[['書籍總數',d.bookCount],['學生會員',d.userCount],['借閱中',d.borrowingCount],['逾期未還',d.overdueCount],['書評',d.reviewCount],['預約中',d.reservationCount],['VIP待審',d.vipRequestCount]].map(x=>`<div class="card"><div class="num">${x[1]}</div><div class="label">${x[0]}</div></div>`).join('');}
+async function loadAdminBooks(){const k=encodeURIComponent($('adminBookKeyword').value||'');const data=await api(`/admin/books?keyword=${k}`);$('adminBooksTable').innerHTML=table(['ID','書名','作者','主題','狀態','操作'],data.map(b=>`<tr><td>${b.book_id}</td><td>${esc(b.title)}</td><td>${esc(b.authors)}</td><td>${esc(b.subjects)}</td><td>${badge(b.status)}</td><td><button class="success" onclick="setBookStatus(${b.book_id},'AVAILABLE')">上架</button> <button class="danger" onclick="setBookStatus(${b.book_id},'REMOVED')">下架</button></td></tr>`));}
+async function adminAddBook(){const d=await post('/admin/book/add',{title:$('addTitle').value,authors:$('addAuthors').value,subjects:$('addSubjects').value,publisher:$('addPublisher').value,publish_year:$('addYear').value});alert(d.message);loadAdminBooks();}
+async function setBookStatus(id,status){const d=await post('/admin/book/status',{book_id:id,status});alert(d.message);loadAdminBooks();}
+async function loadAdminUsers(){const k=encodeURIComponent($('adminUserKeyword').value||'');const data=await api(`/admin/users?keyword=${k}`);$('adminUsersTable').innerHTML=table(['ID','學號','姓名','等級','上限','狀態','操作'],data.map(u=>`<tr><td>${u.user_id}</td><td>${esc(u.student_no)}</td><td>${esc(u.name)}</td><td>${badge(u.role_level)}</td><td>${u.borrow_limit}</td><td>${badge(u.status)}</td><td><button class="success" onclick="setUserStatus(${u.user_id},'ACTIVE')">復權</button> <button class="danger" onclick="setUserStatus(${u.user_id},'SUSPENDED')">停權</button> <button class="warn" onclick="setUserRole(${u.user_id},'VIP')">升VIP</button> <button class="light" onclick="setUserRole(${u.user_id},'NORMAL')">降一般</button></td></tr>`));}
+async function setUserStatus(id,status){const d=await post('/admin/user/status',{user_id:id,status});alert(d.message);loadAdminUsers();}
+async function setUserRole(id,role_level){const d=await post('/admin/user/role',{user_id:id,role_level});alert(d.message);loadAdminUsers();}
+async function loadAdminRecords(){const k=encodeURIComponent($('adminRecordKeyword').value||'');const data=await api(`/admin/records?keyword=${k}`);$('adminRecordsTable').innerHTML=table(['ID','學號','姓名','書名','借出','應還','歸還'],data.map(r=>`<tr><td>${r.record_id}</td><td>${esc(r.student_no)}</td><td>${esc(r.name)}</td><td>${esc(r.title)}</td><td>${esc(r.borrow_date)}</td><td>${esc(r.due_date)}</td><td>${esc(r.return_date||'尚未歸還')}</td></tr>`));}
+function exportAdminRecords(){const k=encodeURIComponent($('adminRecordKeyword').value||'');window.open(`${API}/admin/export/records?keyword=${k}`,'_blank');}
+async function loadAdminOverdue(){const data=await api('/admin/overdue');$('adminOverdueTable').innerHTML=table(['ID','學號','姓名','書名','應還','逾期','罰款','警示'],data.map(r=>`<tr><td>${r.record_id}</td><td>${esc(r.student_no)}</td><td>${esc(r.name)}</td><td>${esc(r.title)}</td><td>${esc(r.due_date)}</td><td>${r.overdue_days} 天</td><td>NT$ ${r.fine}</td><td>${badge(r.level)}</td></tr>`));}
+async function notifyAllOverdue(){if(!confirm('確定要寄送逾期提醒到所有逾期使用者的通知中心嗎？'))return;const d=await post('/admin/overdue/notify',{});alert(d.message);loadAdminOverdue();loadAdminDashboard();}
+async function loadAdminReservations(){const data=await api('/admin/reservations');$('adminReservationsTable').innerHTML=table(['ID','學號','姓名','書名','時間','狀態','操作'],data.map(r=>`<tr><td>${r.reservation_id}</td><td>${esc(r.student_no)}</td><td>${esc(r.name)}</td><td>${esc(r.title)}</td><td>${esc(r.reserve_date)}</td><td>${badge(r.status)}</td><td><button class="success" onclick="setReservation(${r.reservation_id},'READY')">通知可借</button> <button class="light" onclick="setReservation(${r.reservation_id},'COMPLETED')">完成</button> <button class="warn" onclick="setReservation(${r.reservation_id},'CANCELLED')">取消</button> <button class="danger" onclick="deleteReservation(${r.reservation_id},loadAdminReservations)">刪除</button></td></tr>`));}
+async function setReservation(id,status){const d=await post('/reservation/status',{id,status});alert(d.message);loadAdminReservations();}
+async function deleteReservation(id,cb){if(!confirm('確定刪除這筆預約？'))return;const d=await post('/reservation/delete',{id});alert(d.message);cb&&cb();}
+async function loadAdminReviews(){const data=await api('/admin/reviews');$('adminReviewsTable').innerHTML=table(['ID','學號','姓名','書名','評分','內容','時間','操作'],data.map(r=>`<tr><td>${r.review_id}</td><td>${esc(r.student_no)}</td><td>${esc(r.name)}</td><td>${esc(r.title)}</td><td>${r.rating}</td><td>${esc(r.comment)}</td><td>${esc(r.created_at)}</td><td><button class="danger" onclick="deleteReview(${r.review_id})">刪除</button></td></tr>`));}
+async function deleteReview(id){const d=await post('/admin/review/delete',{review_id:id});alert(d.message);loadAdminReviews();}
+async function loadAdminStats(){
+    const data=await api('/admin/stats');
+    if(!data || data.length===0){$('adminStatsBox').innerHTML='<div class="card small">目前沒有借閱統計資料</div>';return;}
+    const max=Math.max(1,...data.map(x=>Number(x.count)||0));
+    const total=Math.max(1,data.reduce((sum,x)=>sum+(Number(x.count)||0),0));
+    const colors=['#0288d1','#00acc1','#7e57c2','#43a047','#f9a825','#ef6c00','#c62828','#5d4037','#455a64','#00897b'];
+    let start=0;
+    const gradient=data.map((x,i)=>{
+        const val=Number(x.count)||0;
+        const end=start+(val/total*100);
+        const part=`${colors[i%colors.length]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+        start=end;
+        return part;
+    }).join(', ');
+    const bars=data.map((x,i)=>{
+        const count=Number(x.count)||0;
+        return `<div class="barRow"><b title="${esc(x.subject)}">${esc(x.subject)}</b><div class="barTrack"><div class="barFill" style="width:${(count/max*100).toFixed(1)}%;background:${colors[i%colors.length]}"></div></div><span>${count} 次</span></div>`;
+    }).join('');
+    const legend=data.map((x,i)=>{
+        const count=Number(x.count)||0;
+        const pct=(count/total*100).toFixed(1);
+        return `<div class="legendItem"><span class="dot" style="background:${colors[i%colors.length]}"></span><span>${esc(x.subject)}：${count} 次，${pct}%</span></div>`;
+    }).join('');
+    $('adminStatsBox').innerHTML=`<div class="chartGrid"><div class="card chartBox"><h3>柱狀圖：主題借閱次數</h3>${bars}</div><div class="card chartBox"><h3>圓餅圖：主題借閱比例</h3><div class="pieChart" style="background:conic-gradient(${gradient})"></div><div class="legend">${legend}</div></div></div>`;
+}
+async function loadAdminVip(){const data=await api('/admin/vip-requests');$('adminVipTable').innerHTML=table(['ID','學號','姓名','目前等級','狀態','申請時間','操作'],data.map(v=>`<tr><td>${v.request_id}</td><td>${esc(v.student_no)}</td><td>${esc(v.name)}</td><td>${badge(v.role_level)}</td><td>${badge(v.status)}</td><td>${esc(v.created_at)}</td><td><button class="success" onclick="vipApprove(${v.request_id})">核准</button> <button class="danger" onclick="vipReject(${v.request_id})">拒絕</button></td></tr>`));}
+async function vipApprove(id){const d=await post('/admin/vip/approve',{request_id:id});alert(d.message);loadAdminVip();}
+async function vipReject(id){const d=await post('/admin/vip/reject',{request_id:id});alert(d.message);loadAdminVip();}
+
+async function loadBadges(){
+    const data=await api(`/my/badges?user_id=${user.user_id}`);
+    $('badgesBox').innerHTML=`<div class="badgeGrid">${data.map(b=>`<div class="achievement ${b.earned?'earned':'locked'}"><h3>${b.earned?'🏅':'🔒'} ${esc(b.name)}</h3><p class="small">${esc(b.description)}</p><b>${b.earned?'已取得':'尚未取得'}</b></div>`).join('')}</div>`;
+}
+async function loadAdminInsights(){
+    const risks=await api('/admin/risk-users');
+    $('riskUsersTable').innerHTML=table(['學號','姓名','逾期本數','最久逾期','總罰款'],risks.map(r=>`<tr><td>${esc(r.student_no)}</td><td>${esc(r.name)}</td><td>${r.overdue_count}</td><td>${r.max_overdue_days} 天</td><td>NT$ ${r.total_fine}</td></tr>`));
+    const alerts=await api('/admin/inventory-alerts');
+    $('inventoryAlertsTable').innerHTML=table(['書名','主題','借閱','預約','評分','建議'],alerts.map(b=>`<tr><td>${esc(b.title)}</td><td>${esc(b.subjects)}</td><td>${b.borrow_count}</td><td>${b.reservation_count}</td><td>${b.avg_rating??'-'}</td><td>${badge(b.suggestion)}</td></tr>`));
+}
+
+const loaders={studentHome:loadStudentHome,bookSearch:loadBooks,recommendations:loadRecommendations,currentBorrow:loadCurrent,history:loadHistory,myReservations:loadMyReservations,favorites:loadFavorites,notifications:loadNotifications,badges:loadBadges,adminDashboard:loadAdminDashboard,adminBooks:loadAdminBooks,adminUsers:loadAdminUsers,adminRecords:loadAdminRecords,adminOverdue:loadAdminOverdue,adminReservations:loadAdminReservations,adminReviews:loadAdminReviews,adminStats:loadAdminStats,adminInsights:loadAdminInsights,adminVip:loadAdminVip};
+loadStudentHome();
+</script>
+</body>
+</html>
